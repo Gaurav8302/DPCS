@@ -1,0 +1,29 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "env": {
+    "NEXTAUTH_URL": {
+      "type": "system"
+    },
+    "NEXTAUTH_SECRET": {
+      "type": "secret"
+    },
+    "NEXT_PUBLIC_BACKEND_URL": {
+      "type": "environment"
+    }
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_BACKEND_URL": "@backend-url"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
+}

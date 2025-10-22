@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+  
+  h1 {
+    @apply text-4xl font-bold;
+  }
+  
+  h2 {
+    @apply text-3xl font-semibold;
+  }
+  
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+  
+  button {
+    @apply transition-all duration-200;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-lg p-6;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+  
+  .progress-step {
+    @apply flex items-center justify-center w-10 h-10 rounded-full border-2 border-gray-300 bg-white text-gray-500 font-semibold;
+  }
+  
+  .progress-step-active {
+    @apply border-primary-600 bg-primary-600 text-white;
+  }
+  
+  .progress-step-completed {
+    @apply border-green-600 bg-green-600 text-white;
+  }
+}
+
+/* High contrast mode */
+.high-contrast {
+  filter: contrast(1.5) saturate(1.3);
+}
+
+/* Accessibility - focus visible */
+*:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary-600;
+}
+
+/* Animation for idle alert */
+@keyframes flash-red {
+  0%, 100% {
+    background-color: rgba(239, 68, 68, 0.8);
+  }
+  50% {
+    background-color: rgba(220, 38, 38, 1);
+  }
+}
+
+.animate-flash-red {
+  animation: flash-red 1s ease-in-out infinite;
+}
+
+/* Prevent text selection on test elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Canvas container */
+.canvas-container {
+  @apply border-2 border-gray-300 rounded-lg overflow-hidden;
+}
