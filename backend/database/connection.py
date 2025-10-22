@@ -24,7 +24,7 @@ from typing import Optional
 import os
 import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo.errors import ConfigurationError
+from pymongo.errors import ConfigurationError, ServerSelectionTimeoutError
 
 # Global MongoDB client
 mongodb_client: Optional[AsyncIOMotorClient] = None
@@ -64,46 +64,57 @@ async def connect_to_mongo() -> None:
     if not mongo_uri:
         raise ValueError("MONGO_URI not found in environment variables")
 
-    # PROTOTYPE MODE: Disable TLS by default unless explicitly enabled
+    # Check if TLS should be enabled (for production/Atlas)
     enable_tls = os.getenv("MONGO_ENABLE_TLS", "").lower() == "true"
     
-    # Build kwargs with minimal options
-    kwargs = {"serverSelectionTimeoutMS": int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000"))}
+    # Build connection kwargs
+    kwargs = {
+        "serverSelectionTimeoutMS": int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "10000")),
+        "connectTimeoutMS": 20000,
+        "socketTimeoutMS": 20000,
+    }
 
-    if enable_tls:
-        # Only use TLS if explicitly enabled (for production deployment)
-        ca_file = os.getenv("MONGO_TLS_CA_FILE") or certifi.where()
-        skip_verify = os.getenv("MONGO_SKIP_TLS_VERIFY", "").lower() == "true"
-        
-        kwargs["tls"] = True
-        kwargs["tlsCAFile"] = ca_file
-        if skip_verify:
-            kwargs["tlsAllowInvalidCertificates"] = True
+    if enable_tls or _is_tls_required(mongo_uri):
+        # TLS/SSL configuration for MongoDB Atlas
         print("🔒 TLS enabled for MongoDB connection")
+        kwargs["tls"] = True
+        kwargs["tlsAllowInvalidCertificates"] = True  # Allow invalid certificates for compatibility
+        
+        # Try to use system CA bundle
+        ca_file = os.getenv("MONGO_TLS_CA_FILE") or certifi.where()
+        try:
+            if os.path.exists(ca_file):
+                kwargs["tlsCAFile"] = ca_file
+        except Exception:
+            pass  # If CA file doesn't exist, proceed without it
     else:
-        # Prototype mode: disable TLS
+        # Prototype mode: TLS disabled
         kwargs["tls"] = False
         print("⚠️  TLS DISABLED (prototype mode) - set MONGO_ENABLE_TLS=true for production")
 
     # Create the client
     try:
+        print(f"🔌 Connecting to MongoDB Atlas...")
         mongodb_client = AsyncIOMotorClient(mongo_uri, **kwargs)
-    except ConfigurationError as e:
-        print("⚠️  ConfigurationError while constructing Mongo client:", e)
-        print("⚠️  Retrying with absolute minimal options...")
-        try:
-            # Final fallback: just the URI, no extra options
-            mongodb_client = AsyncIOMotorClient(mongo_uri)
-        except Exception:
-            raise
-
-    # Test the connection by issuing a ping
-    try:
+        
+        # Test the connection by issuing a ping
         await mongodb_client.admin.command("ping")
         print("✅ Successfully connected to MongoDB")
+        
+    except ServerSelectionTimeoutError as e:
+        print("❌ Failed to connect to MongoDB (timeout):", str(e)[:200])
+        print("💡 Troubleshooting hints:")
+        print("   1. Check MongoDB Atlas IP whitelist includes 0.0.0.0/0")
+        print("   2. Verify connection string username/password are correct")
+        print("   3. Ensure Atlas cluster is running and accessible")
+        raise
+    except ConfigurationError as e:
+        print("❌ MongoDB configuration error:", e)
+        print("💡 Try setting MONGO_ENABLE_TLS=false for local development")
+        raise
     except Exception as e:
-        print("❌ Failed to connect to MongoDB:", e)
-        print("Hints: 1) For local dev, use mongodb://localhost:27017 2) For Atlas with TLS issues, try a local MongoDB instance 3) Set MONGO_ENABLE_TLS=true only when deploying to production")
+        print("❌ Failed to connect to MongoDB:", str(e)[:200])
+        print("💡 Check your MONGO_URI and network connectivity")
         raise
 
 
