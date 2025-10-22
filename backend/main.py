@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
 
-from database.connection import connect_to_mongo, close_mongo_connection
+from database.connection import connect_to_firebase, close_firebase_connection
 from routers import (
     sessions,
     scoring,
@@ -19,11 +19,11 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events"""
-    # Startup: Connect to MongoDB
-    await connect_to_mongo()
+    # Startup: Connect to Firebase
+    await connect_to_firebase()
     yield
-    # Shutdown: Close MongoDB connection
-    await close_mongo_connection()
+    # Shutdown: Close Firebase connection
+    await close_firebase_connection()
 
 app = FastAPI(
     title="Dimentia Project API",
@@ -46,12 +46,12 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring"""
-    from database.connection import get_database
+    from database.connection import get_firestore_client
     
     try:
-        # Check database connection
-        db = await get_database()
-        await db.command("ping")
+        # Check Firestore connection
+        db = get_firestore_client()
+        _ = db.collection("_healthcheck").limit(1).get()
         db_status = "connected"
     except Exception as e:
         db_status = f"error: {str(e)}"
