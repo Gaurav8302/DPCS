@@ -7,19 +7,24 @@
 
 ## Deploy Backend to Render
 
-### Step 0: Configure MongoDB Atlas (CRITICAL!)
+### Step 0: Configure Firebase (CRITICAL!)
 
-**Before deploying, you MUST whitelist Render's IP addresses in MongoDB Atlas:**
+**Before deploying, you MUST set up a Firebase service account:**
 
-1. Go to MongoDB Atlas dashboard: https://cloud.mongodb.com
-2. Select your cluster → Click **"Network Access"** in left sidebar
-3. Click **"Add IP Address"**
-4. Select **"Allow Access from Anywhere"**
-5. Enter: `0.0.0.0/0` (allows all IPs)
-6. Click **"Confirm"**
-7. Wait 1-2 minutes for changes to propagate
+1. Go to Firebase Console: https://console.firebase.google.com
+2. Select your project **dpcs-67de3**
+3. Go to **Project Settings** (gear icon) → **Service Accounts**
+4. Click **"Generate New Private Key"**
+5. Download the JSON file (keep it secure!)
+6. You'll need values from this file for Render environment variables
 
-**Without this step, your backend will fail with timeout errors!**
+**The JSON file contains:**
+- `project_id`
+- `private_key_id`
+- `private_key`
+- `client_email`
+- `client_id`
+- `client_x509_cert_url`
 
 ### Step 1: Push to GitHub
 ```bash
@@ -50,18 +55,23 @@ Click **"Advanced"** → **"Add Environment Variable"** and add:
 
 ```
 PYTHON_VERSION=3.11.9
-MONGO_URI=mongodb+srv://wannabehacker0506_db_user:HjdDyVfqrsWXdOSu@cluster0.am7ybpw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&tls=true&tlsAllowInvalidCertificates=true
-MONGO_ENABLE_TLS=true
+FIREBASE_PROJECT_ID=dpcs-67de3
+FIREBASE_PRIVATE_KEY_ID=your-private-key-id-from-json-file
+FIREBASE_PRIVATE_KEY=your-private-key-from-json-file-keep-the-newlines
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@dpcs-67de3.iam.gserviceaccount.com
+FIREBASE_CLIENT_ID=your-client-id-from-json-file
+FIREBASE_CLIENT_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-xxxxx%40dpcs-67de3.iam.gserviceaccount.com
 SECRET_KEY=generate-random-32-char-string-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ALLOWED_ORIGINS=https://your-app.vercel.app
 ```
 
-**Important MongoDB URI Notes:**
-- Added `tls=true&tlsAllowInvalidCertificates=true` to connection string
-- This bypasses certificate validation (safe for M0 free tier clusters)
-- For production, use proper certificates
+**Important Firebase Notes:**
+- Download service account JSON from Firebase Console
+- Copy values from the JSON file to environment variables
+- For `FIREBASE_PRIVATE_KEY`, copy the entire value including `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----`
+- Keep the `\n` characters in the private key (don't replace them)
 
 **Generate SECRET_KEY**:
 ```bash
