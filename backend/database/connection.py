@@ -64,42 +64,35 @@ async def connect_to_mongo() -> None:
     if not mongo_uri:
         raise ValueError("MONGO_URI not found in environment variables")
 
-    # Check if TLS should be enabled (for production/Atlas)
+    # Check if TLS parameters are in the connection string
+    has_tls_in_uri = "tls=true" in mongo_uri.lower() or "ssl=true" in mongo_uri.lower()
     enable_tls = os.getenv("MONGO_ENABLE_TLS", "").lower() == "true"
     
-    # Build connection kwargs
+    # Build minimal connection kwargs - let connection string parameters take precedence
     kwargs = {
-        "serverSelectionTimeoutMS": int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "10000")),
-        "connectTimeoutMS": 20000,
-        "socketTimeoutMS": 20000,
+        "serverSelectionTimeoutMS": int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "15000")),
     }
 
-    if enable_tls or _is_tls_required(mongo_uri):
+    # Only add TLS kwargs if NOT already in connection string
+    if not has_tls_in_uri and (enable_tls or _is_tls_required(mongo_uri)):
         # TLS/SSL configuration for MongoDB Atlas
-        print("🔒 TLS enabled for MongoDB connection")
+        print("🔒 TLS enabled via Python kwargs")
         kwargs["tls"] = True
         kwargs["tlsAllowInvalidCertificates"] = True  # Allow invalid certificates for compatibility
-        
-        # Try to use system CA bundle
-        ca_file = os.getenv("MONGO_TLS_CA_FILE") or certifi.where()
-        try:
-            if os.path.exists(ca_file):
-                kwargs["tlsCAFile"] = ca_file
-        except Exception:
-            pass  # If CA file doesn't exist, proceed without it
+    elif has_tls_in_uri:
+        print("🔒 TLS configured in connection string")
     else:
         # Prototype mode: TLS disabled
-        kwargs["tls"] = False
-        print("⚠️  TLS DISABLED (prototype mode) - set MONGO_ENABLE_TLS=true for production")
+        print("⚠️  TLS DISABLED (prototype mode)")
 
-    # Create the client
+    # Create the client - connection string parameters override kwargs
     try:
-        print(f"🔌 Connecting to MongoDB Atlas...")
+        print(f"🔌 Connecting to MongoDB...")
         mongodb_client = AsyncIOMotorClient(mongo_uri, **kwargs)
         
         # Test the connection by issuing a ping
         await mongodb_client.admin.command("ping")
-        print("✅ Successfully connected to MongoDB")
+        print("✅ Successfully connected to MongoDB!")
         
     except ServerSelectionTimeoutError as e:
         print("❌ Failed to connect to MongoDB (timeout):", str(e)[:200])

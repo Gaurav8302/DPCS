@@ -7,6 +7,20 @@
 
 ## Deploy Backend to Render
 
+### Step 0: Configure MongoDB Atlas (CRITICAL!)
+
+**Before deploying, you MUST whitelist Render's IP addresses in MongoDB Atlas:**
+
+1. Go to MongoDB Atlas dashboard: https://cloud.mongodb.com
+2. Select your cluster → Click **"Network Access"** in left sidebar
+3. Click **"Add IP Address"**
+4. Select **"Allow Access from Anywhere"**
+5. Enter: `0.0.0.0/0` (allows all IPs)
+6. Click **"Confirm"**
+7. Wait 1-2 minutes for changes to propagate
+
+**Without this step, your backend will fail with timeout errors!**
+
 ### Step 1: Push to GitHub
 ```bash
 git init
@@ -36,13 +50,18 @@ Click **"Advanced"** → **"Add Environment Variable"** and add:
 
 ```
 PYTHON_VERSION=3.11.9
-MONGO_URI=mongodb+srv://wannabehacker0506_db_user:HjdDyVfqrsWXdOSu@cluster0.am7ybpw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+MONGO_URI=mongodb+srv://wannabehacker0506_db_user:HjdDyVfqrsWXdOSu@cluster0.am7ybpw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&tls=true&tlsAllowInvalidCertificates=true
 MONGO_ENABLE_TLS=true
 SECRET_KEY=generate-random-32-char-string-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ALLOWED_ORIGINS=https://your-app.vercel.app
 ```
+
+**Important MongoDB URI Notes:**
+- Added `tls=true&tlsAllowInvalidCertificates=true` to connection string
+- This bypasses certificate validation (safe for M0 free tier clusters)
+- For production, use proper certificates
 
 **Generate SECRET_KEY**:
 ```bash
