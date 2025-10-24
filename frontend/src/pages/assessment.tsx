@@ -27,70 +27,96 @@ export default function Assessment() {
       title: 'Trail Making Test',
       description: 'Connect numbers in sequence to test visual attention and task switching',
       duration: '2-3 minutes',
-      status: 'ready'
+      status: 'ready',
+      path: '/tests/trail-making'
     },
     {
       id: 2,
-      title: 'Cube Copy',
-      description: 'Copy a 3D cube to assess visuospatial abilities',
+      title: 'Shape Drawing',
+      description: 'Copy 2D shapes and a 3D cone to assess visuospatial abilities',
       duration: '2 minutes',
-      status: 'ready'
+      status: 'ready',
+      path: '/tests/cube-copy'
     },
     {
       id: 3,
       title: 'Clock Drawing',
       description: 'Draw a clock showing a specific time',
       duration: '2 minutes',
-      status: 'ready'
+      status: 'ready',
+      path: '/tests/clock-drawing'
     },
     {
       id: 4,
       title: 'Naming Test',
       description: 'Identify animals from images',
       duration: '1 minute',
-      status: 'ready'
+      status: 'ready',
+      path: '/tests/naming'
     },
     {
       id: 5,
-      title: 'Memory - Registration',
-      description: 'Remember a list of words for later recall',
-      duration: '2 minutes',
-      status: 'ready'
+      title: 'Attention - Forward',
+      description: 'Forward digit span test',
+      duration: '1 minute',
+      status: 'ready',
+      path: '/tests/attention-forward'
     },
     {
       id: 6,
-      title: 'Attention Tests',
-      description: 'Digit span forward/backward and vigilance tasks',
-      duration: '3-4 minutes',
-      status: 'ready'
+      title: 'Attention - Backward',
+      description: 'Backward digit span test',
+      duration: '1 minute',
+      status: 'ready',
+      path: '/tests/attention-backward'
     },
     {
       id: 7,
-      title: 'Language',
-      description: 'Sentence repetition and verbal fluency',
-      duration: '2-3 minutes',
-      status: 'ready'
+      title: 'Attention - Vigilance',
+      description: 'Letter vigilance task',
+      duration: '2 minutes',
+      status: 'ready',
+      path: '/tests/attention-vigilance'
     },
     {
       id: 8,
-      title: 'Abstraction',
-      description: 'Identify similarities between pairs of items',
-      duration: '1 minute',
-      status: 'ready'
+      title: 'Sentence Repetition',
+      description: 'Repeat sentences accurately',
+      duration: '2 minutes',
+      status: 'ready',
+      path: '/tests/sentence-repetition'
     },
     {
       id: 9,
-      title: 'Delayed Recall',
-      description: 'Recall the words from earlier',
-      duration: '2 minutes',
-      status: 'ready'
+      title: 'Verbal Fluency',
+      description: 'Name words starting with F',
+      duration: '1 minute',
+      status: 'ready',
+      path: '/tests/verbal-fluency'
     },
     {
       id: 10,
+      title: 'Abstraction',
+      description: 'Identify similarities between pairs of items',
+      duration: '1 minute',
+      status: 'ready',
+      path: '/tests/abstraction'
+    },
+    {
+      id: 11,
+      title: 'Delayed Recall',
+      description: 'Recall the words from earlier',
+      duration: '2 minutes',
+      status: 'ready',
+      path: '/tests/delayed-recall'
+    },
+    {
+      id: 12,
       title: 'Orientation',
       description: 'Questions about date, time, and place',
       duration: '1 minute',
-      status: 'ready'
+      status: 'ready',
+      path: '/tests/orientation'
     }
   ]
 
@@ -198,7 +224,7 @@ export default function Assessment() {
                 
                 <button
                   className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
-                  onClick={() => alert('Module coming soon! Full implementation in progress.')}
+                  onClick={() => router.push(module.path)}
                 >
                   Start Module
                 </button>
