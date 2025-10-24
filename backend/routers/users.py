@@ -42,7 +42,8 @@ async def create_user(user: UserCreate):
         "created_at": datetime.utcnow()
     }
     
-    await users_collection.insert_one(user_doc)
+    # Insert into Firestore (this will pop the _id from user_doc)
+    await users_collection.insert_one(user_doc.copy())
     
     # Log user creation
     audit_collection = get_collection("logs")
@@ -57,6 +58,7 @@ async def create_user(user: UserCreate):
     }
     await audit_collection.insert_one(audit_log)
     
+    # Return with the original user_doc that still has _id
     return UserInDB(**user_doc)
 
 @router.get("/{user_id}", response_model=UserInDB)
