@@ -15,9 +15,9 @@ A next-generation digital platform for early detection of cognitive decline and 
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Konva.js
 - **Backend**: FastAPI (Python 3.11+)
-- **Database**: MongoDB Atlas
+- **Database**: Firebase Firestore ✨ NEW
 - **Authentication**: NextAuth.js
-- **Deployment**: Vercel (frontend) + AWS/GCP (backend)
+- **Deployment**: Vercel (frontend) + Render.com (backend)
 
 ## 🚀 Quick Start
 
@@ -25,7 +25,7 @@ A next-generation digital platform for early detection of cognitive decline and 
 
 - Node.js 18+
 - Python 3.11+
-- MongoDB Atlas account
+- Firebase account (free tier available)
 
 ### Frontend Setup
 

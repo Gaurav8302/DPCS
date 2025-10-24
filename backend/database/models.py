@@ -1,0 +1,160 @@
+"""
+Pydantic models for Firebase Firestore
+"""
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+from enum import Enum
+
+
+class EducationLevel(str, Enum):
+    """Education level classification based on years of education"""
+    LOW = "low"           # 0-8 years
+    MEDIUM = "medium"     # 9-12 years
+    HIGH = "high"         # 13+ years
+
+
+def classify_education_level(education_years: int) -> EducationLevel:
+    """Classify education level based on years of education"""
+    if education_years <= 8:
+        return EducationLevel.LOW
+    elif education_years <= 12:
+        return EducationLevel.MEDIUM
+    else:
+        return EducationLevel.HIGH
+
+
+# User Models
+class UserBase(BaseModel):
+    """Base user model"""
+    email: EmailStr
+    name: str
+    education_years: int = Field(ge=0, le=30, description="Years of formal education")
+
+
+class UserCreate(UserBase):
+    """User creation model"""
+    pass
+
+
+class UserInDB(UserBase):
+    """User model as stored in database"""
+    id: str = Field(alias="_id")
+    education_level: str
+    created_at: datetime
+
+    class Config:
+        populate_by_name = True
+        json_schema_extra = {
+            "example": {
+                "_id": "user-123",
+                "email": "john.doe@example.com",
+                "name": "John Doe",
+                "education_years": 16,
+                "education_level": "high",
+                "created_at": "2024-01-01T00:00:00"
+            }
+        }
+
+
+# Session Models
+class SessionBase(BaseModel):
+    """Base session model"""
+    user_id: str
+
+
+class SessionCreate(SessionBase):
+    """Session creation model"""
+    pass
+
+
+class SessionUpdate(BaseModel):
+    """Session update model"""
+    completed_sections: Optional[List[str]] = None
+    total_score: Optional[float] = None
+    requires_manual_review: Optional[bool] = None
+    section_scores: Optional[Dict[str, float]] = None
+
+
+class SessionInDB(SessionBase):
+    """Session model as stored in database"""
+    id: str = Field(alias="_id")
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    completed_sections: List[str] = []
+    total_score: float = 0.0
+    requires_manual_review: bool = False
+    section_scores: Dict[str, float] = {}
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+        json_schema_extra = {
+            "example": {
+                "_id": "session-123",
+                "user_id": "user-123",
+                "start_time": "2024-01-01T00:00:00",
+                "completed_sections": ["memory", "attention"],
+                "total_score": 25.5,
+                "requires_manual_review": False,
+                "section_scores": {"memory": 12.5, "attention": 13.0},
+                "created_at": "2024-01-01T00:00:00"
+            }
+        }
+
+
+# Result Models
+class ResultBase(BaseModel):
+    """Base result model"""
+    session_id: str
+    section_name: str
+    raw_score: float
+    normalized_score: float
+    max_score: float
+    user_responses: Dict[str, Any] = {}
+
+
+class ResultCreate(ResultBase):
+    """Result creation model"""
+    pass
+
+
+class ResultInDB(ResultBase):
+    """Result model as stored in database"""
+    id: str = Field(alias="_id")
+    created_at: datetime
+
+    class Config:
+        populate_by_name = True
+        json_schema_extra = {
+            "example": {
+                "_id": "result-123",
+                "session_id": "session-123",
+                "section_name": "memory",
+                "raw_score": 12.5,
+                "normalized_score": 0.83,
+                "max_score": 15.0,
+                "user_responses": {"q1": "correct", "q2": "incorrect"},
+                "created_at": "2024-01-01T00:00:00"
+            }
+        }
+
+
+# Audit Log Models
+class AuditLogCreate(BaseModel):
+    """Audit log creation model"""
+    action: str
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    details: Dict[str, Any] = {}
+
+
+class AuditLogInDB(AuditLogCreate):
+    """Audit log model as stored in database"""
+    id: str = Field(alias="_id")
+    timestamp: datetime
+    ip_address: Optional[str] = None
+
+    class Config:
+        populate_by_name = True

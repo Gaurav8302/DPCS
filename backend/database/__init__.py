@@ -1,8 +1,8 @@
-# Database package initialization
+# Database package initialization - Firebase Firestore
 from .connection import (
-    connect_to_mongo,
-    close_mongo_connection,
-    get_database,
+    connect_to_firebase,
+    close_firebase_connection,
+    get_firestore_client,
     get_collection
 )
 from .models import (
@@ -23,9 +23,9 @@ from .models import (
 )
 
 __all__ = [
-    "connect_to_mongo",
-    "close_mongo_connection",
-    "get_database",
+    "connect_to_firebase",
+    "close_firebase_connection",
+    "get_firestore_client",
     "get_collection",
     "UserBase",
     "UserCreate",

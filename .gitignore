@@ -51,3 +51,9 @@ logs/
 secrets/
 *.pem
 *.key
+*firebase-adminsdk*.json
+
+# Python virtual environments
+venv311/
+backend/venv/
+backend/venv311/

@@ -32,14 +32,27 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Configuration
+# CORS Configuration - Allow local development origins
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
+# Add common local development origins if not already present
+default_local_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+# Merge with environment origins
+all_origins = list(set([origin.strip() for origin in allowed_origins] + default_local_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in allowed_origins],
+    allow_origins=all_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Health check endpoint
@@ -53,8 +66,16 @@ async def health_check():
         db = get_firestore_client()
         _ = db.collection("_healthcheck").limit(1).get()
         db_status = "connected"
+    except RuntimeError as e:
+        # Firestore client not initialized
+        db_status = "not_initialized"
     except Exception as e:
-        db_status = f"error: {str(e)}"
+        # Firestore API might not be enabled
+        error_msg = str(e)
+        if "PERMISSION_DENIED" in error_msg or "SERVICE_DISABLED" in error_msg or "403" in error_msg:
+            db_status = "firestore_api_not_enabled"
+        else:
+            db_status = f"error: {str(e)[:100]}"
     
     return {
         "status": "healthy",
