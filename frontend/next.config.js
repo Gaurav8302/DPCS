@@ -6,9 +6,8 @@ const nextConfig = {
     domains: ['localhost'],
     unoptimized: true,
   },
-  env: {
-    NEXT_PUBLIC_BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:8000',
-  },
+  // Environment variables are automatically exposed when prefixed with NEXT_PUBLIC_
+  // No need to manually configure them here
 }
 
 module.exports = nextConfig
