@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Firestore Emulator (for local development)
+  firestore-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    container_name: dimentia-firestore-emulator
+    command: >
+      gcloud emulators firestore start 
+      --host-port=0.0.0.0:8080
+      --project=demo-dimentia-project
+    ports:
+      - "8080:8080"
+    environment:
+      - FIRESTORE_PROJECT_ID=demo-dimentia-project
+    volumes:
+      - firestore-data:/opt/data
+    networks:
+      - dimentia-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Python FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dimentia-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Use Firestore emulator
+      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8080
+      - FIREBASE_PROJECT_ID=demo-dimentia-project
+      # These won't be used with emulator, but required for initialization
+      - FIREBASE_PRIVATE_KEY_ID=dummy
+      - FIREBASE_PRIVATE_KEY=dummy
+      - FIREBASE_CLIENT_EMAIL=dummy@demo.com
+      - FIREBASE_CLIENT_ID=dummy
+      - FIREBASE_CLIENT_CERT_URL=dummy
+      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      firestore-emulator:
+        condition: service_healthy
+    networks:
+      - dimentia-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dimentia-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - dimentia-network
+    command: npm run dev
+
+networks:
+  dimentia-network:
+    driver: bridge
+
+volumes:
+  firestore-data:
+    driver: local

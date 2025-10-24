@@ -1,7 +1,11 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
+import uuid
+
+from database import get_collection
+from utils.scoring import score_orientation
 
 router = APIRouter()
 
@@ -26,7 +30,7 @@ async def verify_location(data: LocationRequest):
     For now, we accept the city provided
     """
     # Placeholder: Accept any city
-    # In production: Use reverse geocoding API
+    # In production: Use reverse geocoding API or Google Maps Geocoding
     return LocationResponse(
         city_correct=True,
         confidence=0.8,
@@ -71,3 +75,48 @@ async def verify_datetime(data: DateTimeRequest):
         score=score,
         confidence=1.0
     )
+
+# Orientation Scoring Models (5 questions per PRD: date, month, year, day, city)
+class OrientationRequest(BaseModel):
+    session_id: str
+    user_id: str
+    responses: Dict[str, str]  # {date, month, year, day, city}
+
+class OrientationResponse(BaseModel):
+    score: int  # 0-5 points
+    confidence: float
+    individual_scores: Dict[str, Dict[str, Any]]
+
+@router.post("/orientation", response_model=OrientationResponse)
+async def score_orientation_endpoint(data: OrientationRequest):
+    """
+    Score orientation questions (5 questions, 1 point each)
+    - Date (number)
+    - Month (name)
+    - Year (number)
+    - Day (name)
+    - City (name from geolocation)
+    
+    PRD: Removed "Name of this place" - now 5 questions total
+    """
+    result = score_orientation(data.responses)
+    
+    # Store result
+    results_collection = get_collection("results")
+    result_doc = {
+        "_id": str(uuid.uuid4()),
+        "session_id": data.session_id,
+        "user_id": data.user_id,
+        "section_name": "orientation",
+        "raw_score": result["score"],
+        "confidence": result["confidence"],
+        "details": {
+            "responses": data.responses,
+            "individual_scores": result["individual_scores"]
+        },
+        "requires_manual_review": False,
+        "created_at": datetime.utcnow()
+    }
+    await results_collection.insert_one(result_doc)
+    
+    return OrientationResponse(**result)

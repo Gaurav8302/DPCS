@@ -8,20 +8,25 @@ from enum import Enum
 
 
 class EducationLevel(str, Enum):
-    """Education level classification based on years of education"""
-    LOW = "low"           # 0-8 years
-    MEDIUM = "medium"     # 9-12 years
-    HIGH = "high"         # 13+ years
+    """Education level classification based on years of education per PRD"""
+    NOT_EDUCATED = "not_educated"          # 0 years or "none"
+    BASIC_SCHOOLING = "basic_schooling"    # 1-12 years
+    COLLEGE_LEVEL = "college_level"        # 13+ years
 
 
 def classify_education_level(education_years: int) -> EducationLevel:
-    """Classify education level based on years of education"""
-    if education_years <= 8:
-        return EducationLevel.LOW
+    """
+    Classify education level based on years of education per PRD requirements
+    - not_educated: 0 years or "none"
+    - basic_schooling: 1-12 years
+    - college_level: 13+ years
+    """
+    if education_years == 0:
+        return EducationLevel.NOT_EDUCATED
     elif education_years <= 12:
-        return EducationLevel.MEDIUM
+        return EducationLevel.BASIC_SCHOOLING
     else:
-        return EducationLevel.HIGH
+        return EducationLevel.COLLEGE_LEVEL
 
 
 # User Models

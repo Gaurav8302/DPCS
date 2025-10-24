@@ -11,7 +11,8 @@ from routers import (
     scoring,
     verification,
     results,
-    users
+    users,
+    admin
 )
 
 load_dotenv()
@@ -98,6 +99,9 @@ async def root():
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
 app.include_router(scoring.router, prefix="/api/score", tags=["Scoring"])
+app.include_router(verification.router, prefix="/api/verify", tags=["Verification"])
+app.include_router(results.router, prefix="/api/results", tags=["Results"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(verification.router, prefix="/api/verify", tags=["Verification"])
 app.include_router(results.router, prefix="/api/results", tags=["Results"])
 

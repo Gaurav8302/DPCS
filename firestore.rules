@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // DEVELOPMENT RULES (Permissive)
+    // ⚠️ CHANGE BEFORE PRODUCTION DEPLOYMENT
+    // ==========================================
+    
+    // Allow all reads and writes for development
+    // TODO: Replace with production rules before deploying
+    match /{document=**} {
+      allow read, write: if true;  // ⚠️ DEVELOPMENT ONLY
+    }
+    
+    // ==========================================
+    // PRODUCTION RULES (Comment in for production)
+    // ==========================================
+    
+    /*
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.admin == true;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && 
+             request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can create a user (registration)
+      allow create: if true;
+      
+      // Users can read their own data
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can update their own data
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Sessions collection
+    match /sessions/{sessionId} {
+      // Anyone can create a session (starting assessment)
+      allow create: if isAuthenticated();
+      
+      // Users can read their own sessions, admins can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.user_id == request.auth.uid || isAdmin());
+      
+      // Users can update their own sessions, admins can update all
+      allow update: if isAuthenticated() && 
+                      (resource.data.user_id == request.auth.uid || isAdmin());
+      
+      // Only admins can delete sessions
+      allow delete: if isAdmin();
+    }
+    
+    // Results collection
+    match /results/{resultId} {
+      // Authenticated users can create results
+      allow create: if isAuthenticated();
+      
+      // Users can read their own results, admins can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.user_id == request.auth.uid || isAdmin());
+      
+      // Only system/admins can update results
+      allow update: if isAdmin();
+      
+      // Only admins can delete results
+      allow delete: if isAdmin();
+    }
+    
+    // Logs collection (audit logs)
+    match /logs/{logId} {
+      // System can create logs
+      allow create: if true;
+      
+      // Only admins can read logs
+      allow read: if isAdmin();
+      
+      // Logs are immutable
+      allow update, delete: if false;
+    }
+    
+    // Health check collection (for monitoring)
+    match /_healthcheck/{document} {
+      // Public read for health checks
+      allow read: if true;
+      
+      // System can write
+      allow write: if true;
+    }
+    */
+  }
+}
