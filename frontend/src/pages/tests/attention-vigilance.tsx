@@ -75,7 +75,7 @@ export default function AttentionVigilance() {
     setLoading(true)
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scoring/attention-vigilance`, {
+      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/attention-vigilance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

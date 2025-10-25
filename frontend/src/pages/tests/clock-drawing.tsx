@@ -17,8 +17,8 @@ export default function ClockDrawingTest() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
 
   useEffect(() => {
-    const storedUserId = sessionStorage.getItem('userId')
-    const storedSessionId = sessionStorage.getItem('sessionId')
+    const storedUserId = sessionStorage.getItem('user_id')
+    const storedSessionId = sessionStorage.getItem('session_id')
     
     if (!storedUserId) {
       router.push('/consent')
@@ -150,7 +150,7 @@ export default function ClockDrawingTest() {
         imageData = canvasRef.current.toDataURL('image/png')
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/score/clock-drawing`, {
+      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/clock-drawing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

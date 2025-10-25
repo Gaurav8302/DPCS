@@ -22,8 +22,8 @@ export default function NamingTest() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    const storedUserId = sessionStorage.getItem('userId')
-    const storedSessionId = sessionStorage.getItem('sessionId')
+    const storedUserId = sessionStorage.getItem('user_id')
+    const storedSessionId = sessionStorage.getItem('session_id')
     
     if (!storedUserId) {
       router.push('/consent')
@@ -59,7 +59,7 @@ export default function NamingTest() {
         user_answer: answers[index].trim()
       }))
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/score/naming`, {
+      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/naming`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

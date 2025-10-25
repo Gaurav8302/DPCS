@@ -1,64 +1,53 @@
-# Firestore Indexes Configuration
-# 
-# This file defines composite indexes for Firestore queries
-# Deploy with: firebase deploy --only firestore:indexes
-#
-# Firestore automatically creates single-field indexes
-# Composite indexes are needed for queries with multiple filters/sorts
-
-indexes:
-  # Sessions by user, sorted by creation time (for user history)
-  - collectionGroup: sessions
-    queryScope: COLLECTION
-    fields:
-      - fieldPath: user_id
-        order: ASCENDING
-      - fieldPath: created_at
-        order: DESCENDING
-  
-  # Sessions requiring manual review, sorted by creation time
-  - collectionGroup: sessions
-    queryScope: COLLECTION
-    fields:
-      - fieldPath: requires_manual_review
-        order: ASCENDING
-      - fieldPath: created_at
-        order: DESCENDING
-  
-  # Results by session, sorted by creation time
-  - collectionGroup: results
-    queryScope: COLLECTION
-    fields:
-      - fieldPath: session_id
-        order: ASCENDING
-      - fieldPath: created_at
-        order: ASCENDING
-  
-  # Results by user, sorted by creation time
-  - collectionGroup: results
-    queryScope: COLLECTION
-    fields:
-      - fieldPath: user_id
-        order: ASCENDING
-      - fieldPath: created_at
-        order: DESCENDING
-  
-  # Audit logs by user, sorted by timestamp
-  - collectionGroup: logs
-    queryScope: COLLECTION
-    fields:
-      - fieldPath: user_id
-        order: ASCENDING
-      - fieldPath: timestamp
-        order: DESCENDING
-  
-  # Audit logs by action type, sorted by timestamp
-  - collectionGroup: logs
-    queryScope: COLLECTION
-    fields:
-      - fieldPath: action
-        order: ASCENDING
-      - fieldPath: timestamp
-        order: DESCENDING
-
-fieldOverrides: []
+{
+  "indexes": [
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requires_manual_review", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "results",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "session_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "results",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "action", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

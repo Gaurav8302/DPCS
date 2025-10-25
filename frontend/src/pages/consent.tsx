@@ -24,7 +24,8 @@ export default function Consent() {
 
     try {
       // Create user in backend
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const response = await fetch(`${apiUrl}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,17 +38,20 @@ export default function Consent() {
       })
 
       if (response.ok) {
-        const user = await response.json()
-        // Store user ID in session storage
-        sessionStorage.setItem('userId', user.user_id)
-        // Redirect to assessment
-        router.push('/assessment')
+        const data = await response.json()
+        // Store user ID and session ID in session storage
+        sessionStorage.setItem('user_id', data.user_id)
+        sessionStorage.setItem('session_id', data.session_id)
+        
+        // Redirect to first test (trail-making)
+        router.push('/tests/trail-making')
       } else {
-        alert('Failed to create user. Please try again.')
+        const errorData = await response.json()
+        alert(`Failed to create user: ${errorData.detail || 'Please try again.'}`)
       }
     } catch (error) {
       console.error('Error:', error)
-      alert('An error occurred. Please try again.')
+      alert('Unable to connect to server. Please check your internet connection and try again.')
     }
   }
 

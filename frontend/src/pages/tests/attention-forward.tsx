@@ -14,8 +14,8 @@ export default function AttentionForwardTest() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    const storedUserId = sessionStorage.getItem('userId')
-    const storedSessionId = sessionStorage.getItem('sessionId')
+    const storedUserId = sessionStorage.getItem('user_id')
+    const storedSessionId = sessionStorage.getItem('session_id')
     
     if (!storedUserId) {
       router.push('/consent')
@@ -53,7 +53,7 @@ export default function AttentionForwardTest() {
     try {
       const userResponse = userInput.map(val => parseInt(val))
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/score/attention/forward`, {
+      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/attention/forward`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -20,8 +20,8 @@ export default function CubeCopyTest() {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
-    const storedUserId = sessionStorage.getItem('userId')
-    const storedSessionId = sessionStorage.getItem('sessionId')
+    const storedUserId = sessionStorage.getItem('user_id')
+    const storedSessionId = sessionStorage.getItem('session_id')
     
     if (!storedUserId) {
       router.push('/consent')
@@ -150,7 +150,8 @@ export default function CubeCopyTest() {
         imageData = canvasRef.current.toDataURL('image/png')
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/score/cube-copy`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const response = await fetch(`${apiUrl}/scoring/cube-copy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,16 +166,15 @@ export default function CubeCopyTest() {
         const result = await response.json()
         console.log('Cube Copy Result:', result)
         
-        // Show confidence score
-        alert(`Score: ${result.score}/3\nConfidence: ${(result.confidence * 100).toFixed(0)}%${result.requires_manual_review ? '\n⚠️ May require manual review' : ''}`)
-        
         router.push('/tests/clock-drawing')
       } else {
-        alert('Failed to submit results')
+        alert('Failed to submit results. Proceeding to next test...')
+        router.push('/tests/clock-drawing')
       }
     } catch (error) {
       console.error('Error submitting:', error)
-      alert('Error submitting results')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/clock-drawing')
     } finally {
       setSubmitting(false)
     }

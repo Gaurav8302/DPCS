@@ -70,7 +70,7 @@ export default function VerbalFluency() {
     setLoading(true)
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scoring/verbal-fluency`, {
+      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/verbal-fluency`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

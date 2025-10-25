@@ -11,7 +11,7 @@ export default function Assessment() {
 
   useEffect(() => {
     // Check if user has registered
-    const storedUserId = sessionStorage.getItem('userId')
+    const storedUserId = sessionStorage.getItem('user_id')
     if (!storedUserId) {
       // Redirect to consent if not registered
       router.push('/consent')
@@ -20,6 +20,11 @@ export default function Assessment() {
       setLoading(false)
     }
   }, [router])
+
+  const startAssessment = () => {
+    // Start the assessment flow from the first test
+    router.push('/tests/trail-making')
+  }
 
   const modules = [
     {
@@ -198,56 +203,84 @@ export default function Assessment() {
             </div>
           </div>
 
-          {/* Assessment Modules */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {modules.map((module) => (
-              <div key={module.id} className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="flex items-center justify-center w-8 h-8 bg-primary-100 text-primary-600 rounded-full font-bold">
-                        {module.id}
-                      </span>
-                      <h3 className="text-xl font-semibold text-gray-900">
-                        {module.title}
-                      </h3>
-                    </div>
-                    <p className="text-gray-600 text-sm mb-3">
-                      {module.description}
-                    </p>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {module.duration}
+          {/* Assessment Overview */}
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Ready to Begin Your Assessment?
+            </h2>
+            <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
+              You will complete 12 cognitive tests in sequence. Each test will automatically 
+              proceed to the next one. The entire assessment takes approximately 20-30 minutes.
+            </p>
+
+            <div className="grid md:grid-cols-3 gap-4 mb-8 max-w-3xl mx-auto">
+              <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg">
+                <Clock className="w-8 h-8 text-blue-600" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Duration</p>
+                  <p className="text-sm text-gray-600">20-30 minutes</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">12 Modules</p>
+                  <p className="text-sm text-gray-600">Sequential flow</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg">
+                <Brain className="w-8 h-8 text-purple-600" />
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">AI Scoring</p>
+                  <p className="text-sm text-gray-600">Instant results</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 max-w-2xl mx-auto text-left">
+              <div className="flex">
+                <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">Before You Begin</h3>
+                  <ul className="mt-2 text-sm text-yellow-700 space-y-1">
+                    <li>• Find a quiet place free from distractions</li>
+                    <li>• Have a pen and paper ready for some tasks</li>
+                    <li>• Complete all modules in one session</li>
+                    <li>• Take your time - accuracy is more important than speed</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Test Modules (in order):</h3>
+              <div className="grid md:grid-cols-2 gap-3 max-w-3xl mx-auto text-left">
+                {modules.map((module) => (
+                  <div key={module.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <span className="flex items-center justify-center w-8 h-8 bg-primary-100 text-primary-600 rounded-full font-bold text-sm">
+                      {module.id}
+                    </span>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 text-sm">{module.title}</p>
+                      <p className="text-xs text-gray-500">{module.duration}</p>
                     </div>
                   </div>
-                </div>
-                
-                <button
-                  className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
-                  onClick={() => router.push(module.path)}
-                >
-                  Start Module
-                </button>
+                ))}
               </div>
-            ))}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
-            <div className="flex gap-4">
-              <Link
-                href="/"
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-center font-medium"
-              >
-                Save & Exit
-              </Link>
-              <button
-                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                onClick={() => alert('Please complete all modules first')}
-              >
-                View Results
-              </button>
             </div>
+
+            <button
+              onClick={startAssessment}
+              className="px-8 py-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-semibold text-lg shadow-lg transition-all transform hover:scale-105"
+            >
+              Start Assessment
+            </button>
+            
+            <p className="text-sm text-gray-500 mt-4">
+              Click to begin the first test
+            </p>
           </div>
         </main>
       </div>

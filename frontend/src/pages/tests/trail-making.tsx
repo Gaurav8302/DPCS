@@ -34,8 +34,8 @@ export default function TrailMakingTest() {
 
   useEffect(() => {
     // Get user info from sessionStorage
-    const storedUserId = sessionStorage.getItem('userId')
-    const storedSessionId = sessionStorage.getItem('sessionId')
+    const storedUserId = sessionStorage.getItem('user_id')
+    const storedSessionId = sessionStorage.getItem('session_id')
     
     if (!storedUserId) {
       router.push('/consent')
@@ -185,7 +185,8 @@ export default function TrailMakingTest() {
         return acc
       }, {} as Record<string, {x: number, y: number}>)
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/score/trail-making`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const response = await fetch(`${apiUrl}/scoring/trail-making`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -204,11 +205,14 @@ export default function TrailMakingTest() {
         // Navigate to next test
         router.push('/tests/cube-copy')
       } else {
-        alert('Failed to submit results')
+        const errorData = await response.json()
+        alert(`Failed to submit results: ${errorData.detail || 'Please try again'}`)
       }
     } catch (error) {
       console.error('Error submitting:', error)
-      alert('Error submitting results')
+      alert('Unable to connect to server. Proceeding to next test...')
+      // Allow proceeding even if submission fails
+      router.push('/tests/cube-copy')
     } finally {
       setSubmitting(false)
     }
