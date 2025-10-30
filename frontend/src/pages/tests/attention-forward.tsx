@@ -53,7 +53,8 @@ export default function AttentionForwardTest() {
     try {
       const userResponse = userInput.map(val => parseInt(val))
       
-      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/attention/forward`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const response = await fetch(`${apiUrl}/api/score/attention/forward`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

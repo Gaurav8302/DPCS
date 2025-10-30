@@ -59,7 +59,7 @@ export default function NamingTest() {
         user_answer: answers[index].trim()
       }))
 
-      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/naming`, {
+      const response = await fetch(`${apiUrl}/api/score/naming`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

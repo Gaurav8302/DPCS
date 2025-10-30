@@ -28,9 +28,9 @@ foreach ($file in $testFiles) {
         $content = $content -replace "process\.env\.NEXT_PUBLIC_API_URL", "(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')"
         $content = $content -replace "process\.env\.NEXT_PUBLIC_BACKEND_URL", "(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')"
         
-        # Fix API endpoints to use correct path
-        $content = $content -replace "/api/score/", "/scoring/"
-        $content = $content -replace "/api/scoring/", "/scoring/"
+        # Fix API endpoints to use correct path - backend uses /api/score/ not /scoring/
+        $content = $content -replace "/scoring/", "/api/score/"
+        $content = $content -replace "/api/api/score/", "/api/score/"
         
         Set-Content $filePath $content -NoNewline
         Write-Host "Updated $file" -ForegroundColor Green

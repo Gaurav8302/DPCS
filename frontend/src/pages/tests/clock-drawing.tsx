@@ -150,7 +150,7 @@ export default function ClockDrawingTest() {
         imageData = canvasRef.current.toDataURL('image/png')
       }
 
-      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/clock-drawing`, {
+      const response = await fetch(`${apiUrl}/api/score/clock-drawing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

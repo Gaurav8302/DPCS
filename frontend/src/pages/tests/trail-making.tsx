@@ -186,7 +186,7 @@ export default function TrailMakingTest() {
       }, {} as Record<string, {x: number, y: number}>)
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
-      const response = await fetch(`${apiUrl}/scoring/trail-making`, {
+      const response = await fetch(`${apiUrl}/api/score/trail-making`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

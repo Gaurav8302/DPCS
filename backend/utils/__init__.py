@@ -12,6 +12,7 @@ from .scoring import (
     score_abstraction,
     score_delayed_recall
 )
+from .session_tracker import MoCAScorer, record_section_result
 
 __all__ = [
     "score_trail_making",
@@ -24,5 +25,7 @@ __all__ = [
     "score_sentence_repetition",
     "score_verbal_fluency",
     "score_abstraction",
-    "score_delayed_recall"
+    "score_delayed_recall",
+    "MoCAScorer",
+    "record_section_result",
 ]

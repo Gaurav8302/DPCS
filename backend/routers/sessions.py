@@ -30,15 +30,19 @@ async def create_session(session: SessionCreate):
     
     # Create session document
     session_id = str(uuid.uuid4())
+    timestamp = datetime.utcnow()
     session_doc = {
         "_id": session_id,
         "user_id": session.user_id,
-        "start_time": datetime.utcnow(),
+        "education_level": user.get("education_level"),
+        "start_time": timestamp,
         "completed_sections": [],
         "total_score": 0.0,
         "requires_manual_review": False,
         "section_scores": {},
-        "created_at": datetime.utcnow(),
+        "subsection_scores": {},
+        "interpretation": None,
+        "created_at": timestamp,
         "updated_at": None
     }
     
@@ -107,12 +111,11 @@ async def get_user_sessions(user_id: str):
     Get all sessions for a user
     """
     sessions_collection = get_collection("sessions")
-    
-    sessions = []
-    async for session in sessions_collection.find({"user_id": user_id}).sort("created_at", -1):
-        sessions.append(SessionInDB(**session))
-    
-    return sessions
+    results = await sessions_collection.find(
+        {"user_id": user_id},
+        order_by=[("created_at", "DESC")]
+    )
+    return [SessionInDB(**session) for session in results]
 
 @router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_session(session_id: str):

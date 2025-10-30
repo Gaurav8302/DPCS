@@ -36,7 +36,9 @@ export default function DelayedRecall() {
     setLoading(true)
     
     try {
-      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/delayed-recall`, {
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const response = await fetch(`${apiUrl}/api/score/delayed-recall`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

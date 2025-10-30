@@ -68,7 +68,9 @@ export default function AttentionBackward() {
       // Reverse the user's input to match backend expectation (backward = reversed)
       const reversedInput = userInput.reverse().join('')
       
-      const response = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com')}/scoring/attention-backward`, {
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const response = await fetch(`${apiUrl}/api/score/attention-backward`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

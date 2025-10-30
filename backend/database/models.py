@@ -56,7 +56,7 @@ class UserInDB(UserBase):
                 "email": "john.doe@example.com",
                 "name": "John Doe",
                 "education_years": 16,
-                "education_level": "high",
+                "education_level": "college_level",
                 "created_at": "2024-01-01T00:00:00"
             }
         }
@@ -66,6 +66,7 @@ class UserInDB(UserBase):
 class SessionBase(BaseModel):
     """Base session model"""
     user_id: str
+    education_level: Optional[str] = None
 
 
 class SessionCreate(SessionBase):
@@ -79,6 +80,8 @@ class SessionUpdate(BaseModel):
     total_score: Optional[float] = None
     requires_manual_review: Optional[bool] = None
     section_scores: Optional[Dict[str, float]] = None
+    subsection_scores: Optional[Dict[str, Any]] = None
+    interpretation: Optional[str] = None
 
 
 class SessionInDB(SessionBase):
@@ -86,10 +89,12 @@ class SessionInDB(SessionBase):
     id: str = Field(alias="_id")
     start_time: datetime
     end_time: Optional[datetime] = None
-    completed_sections: List[str] = []
+    completed_sections: List[str] = Field(default_factory=list)
     total_score: float = 0.0
     requires_manual_review: bool = False
-    section_scores: Dict[str, float] = {}
+    section_scores: Dict[str, float] = Field(default_factory=dict)
+    subsection_scores: Dict[str, Any] = Field(default_factory=dict)
+    interpretation: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -100,10 +105,13 @@ class SessionInDB(SessionBase):
                 "_id": "session-123",
                 "user_id": "user-123",
                 "start_time": "2024-01-01T00:00:00",
-                "completed_sections": ["memory", "attention"],
+                "education_level": "college_level",
+                "completed_sections": ["trail_making", "attention"],
                 "total_score": 25.5,
                 "requires_manual_review": False,
-                "section_scores": {"memory": 12.5, "attention": 13.0},
+                "section_scores": {"trail_making": 1, "attention": 5},
+                "subsection_scores": {"attention": {"forward": 1, "backward": 1, "vigilance": 3}},
+                "interpretation": "Mild",
                 "created_at": "2024-01-01T00:00:00"
             }
         }

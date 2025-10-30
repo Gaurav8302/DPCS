@@ -1,6 +1,10 @@
 """
-Scoring utilities for cognitive tests
-Implements deterministic and heuristic scoring with confidence metrics
+Scoring utilities for cognitive tests.
+
+Note: Several routines include placeholder heuristics for AI-assisted
+analysis. These functions surface deterministic outputs with
+``confidence = 0.6`` so the frontend/backoffice can flag results for
+manual review until production models are integrated.
 """
 from typing import List, Dict, Any
 from fuzzywuzzy import fuzz
@@ -76,7 +80,7 @@ def score_cube_copy(
             # In production, use CV to detect each shape
             shape_scores = {shape: 1 for shape in shapes_to_copy}
             total_score = len(shapes_to_copy)
-            confidence = 0.6  # Low confidence triggers manual review
+            confidence = 0.6  # Placeholder -> require manual review
         
         return {
             "score": total_score,
@@ -118,7 +122,7 @@ def score_clock_drawing(
         else:
             # Placeholder: assume all criteria met if drawing exists
             scores = {"contour": 1, "numbers": 1, "hands": 1}
-            confidence = 0.7  # Borderline for manual review
+            confidence = 0.6  # Placeholder -> require manual review
         
         total_score = sum(scores.values())
         
@@ -170,7 +174,8 @@ def score_naming(
     return {
         "score": total_score,
         "confidence": 1.0,
-        "individual_scores": individual_scores
+        "individual_scores": individual_scores,
+        "requires_manual_review": False
     }
 
 def score_attention_forward(
@@ -182,7 +187,8 @@ def score_attention_forward(
     return {
         "score": 1 if correct else 0,
         "confidence": 1.0,
-        "correct": correct
+        "correct": correct,
+        "requires_manual_review": False
     }
 
 def score_attention_backward(
@@ -195,7 +201,8 @@ def score_attention_backward(
     return {
         "score": 1 if correct else 0,
         "confidence": 1.0,
-        "correct": correct
+        "correct": correct,
+        "requires_manual_review": False
     }
 
 def score_attention_vigilance(
@@ -234,7 +241,8 @@ def score_attention_vigilance(
         "confidence": 1.0,
         "hits": hits,
         "misses": misses,
-        "false_alarms": false_alarms
+        "false_alarms": false_alarms,
+        "requires_manual_review": False
     }
 
 def score_sentence_repetition(
@@ -271,10 +279,12 @@ def score_sentence_repetition(
             "score": score
         })
     
+    capped_score = min(total_score, 2.0)
     return {
-        "score": int(total_score),  # Round to nearest int
-        "confidence": 1.0,
-        "individual_scores": individual_scores
+        "score": float(f"{capped_score:.2f}"),
+        "confidence": 0.6,
+        "individual_scores": individual_scores,
+        "requires_manual_review": True
     }
 
 def score_verbal_fluency(
@@ -297,9 +307,10 @@ def score_verbal_fluency(
     
     return {
         "score": score,
-        "confidence": 0.8,  # ASR may have errors
+        "confidence": 0.6,
         "word_count": word_count,
-        "unique_words": unique_count
+        "unique_words": unique_count,
+        "requires_manual_review": True
     }
 
 def score_abstraction(
@@ -313,7 +324,8 @@ def score_abstraction(
     
     return {
         "score": total_score,
-        "confidence": 1.0
+        "confidence": 1.0,
+        "requires_manual_review": False
     }
 
 def score_delayed_recall(
@@ -358,7 +370,8 @@ def score_delayed_recall(
     return {
         "score": min(score, 4),  # Cap at 4 per PRD
         "confidence": 1.0,
-        "matches": matches
+        "matches": matches,
+        "requires_manual_review": False
     }
 
 def score_orientation(
@@ -464,6 +477,7 @@ def score_orientation(
     return {
         "score": total_score,
         "confidence": 1.0,
-        "individual_scores": individual_scores
+        "individual_scores": individual_scores,
+        "requires_manual_review": False
     }
 

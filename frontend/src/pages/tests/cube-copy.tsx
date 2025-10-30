@@ -151,7 +151,7 @@ export default function CubeCopyTest() {
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
-      const response = await fetch(`${apiUrl}/scoring/cube-copy`, {
+      const response = await fetch(`${apiUrl}/api/score/cube-copy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

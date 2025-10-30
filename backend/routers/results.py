@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from database import get_collection, SessionInDB, UserInDB
+from utils import MoCAScorer
 
 router = APIRouter()
 
@@ -48,32 +49,24 @@ async def get_results(session_id: str):
         )
     
     # Get all results for this session
-    individual_results = []
-    async for result in results_collection.find({"session_id": session_id}):
-        individual_results.append({
+    results = await results_collection.find(
+        {"session_id": session_id},
+        order_by=[("created_at", "ASC")]
+    )
+
+    individual_results = [
+        {
             "section_name": result["section_name"],
             "raw_score": result["raw_score"],
-            "confidence": result["confidence"],
+            "confidence": result.get("confidence", 0.0),
             "details": result.get("details", {}),
             "requires_manual_review": result.get("requires_manual_review", False)
-        })
-    
-    # Calculate total score with education adjustment
-    total_score = session["total_score"]
-    
-    # Apply education adjustment (+1 if not college level)
-    if user["education_level"] != "college_level":
-        total_score = min(total_score + 1, 30)  # Cap at 30
-    
-    # Determine interpretation
-    if total_score >= 26:
-        interpretation = "Normal"
-    elif total_score >= 18:
-        interpretation = "Mild Cognitive Impairment"
-    elif total_score >= 10:
-        interpretation = "Moderate Cognitive Impairment"
-    else:
-        interpretation = "Severe Cognitive Impairment"
+        }
+        for result in results
+    ]
+
+    total_score = float(session.get("total_score", 0.0))
+    interpretation = session.get("interpretation") or MoCAScorer.interpret_score(total_score)
     
     return DetailedResult(
         session_id=session_id,
@@ -106,34 +99,26 @@ async def get_user_history(user_id: str):
         )
     
     # Get all sessions
-    history = []
-    async for session in sessions_collection.find({"user_id": user_id}).sort("created_at", -1):
-        total_score = session["total_score"]
-        
-        # Apply education adjustment
-        if user["education_level"] != "college_level":
-            total_score = min(total_score + 1, 30)
-        
-        # Determine interpretation
-        if total_score >= 26:
-            interpretation = "Normal"
-        elif total_score >= 18:
-            interpretation = "Mild Cognitive Impairment"
-        elif total_score >= 10:
-            interpretation = "Moderate Cognitive Impairment"
-        else:
-            interpretation = "Severe Cognitive Impairment"
-        
+    sessions = await sessions_collection.find(
+        {"user_id": user_id},
+        order_by=[("created_at", "DESC")]
+    )
+
+    history: List[ResultSummary] = []
+    for session in sessions:
+        total_score = float(session.get("total_score", 0.0))
+        interpretation = session.get("interpretation") or MoCAScorer.interpret_score(total_score)
+
         history.append(ResultSummary(
             session_id=session["_id"],
             user_id=user_id,
             user_name=user["name"],
             education_level=user["education_level"],
             total_score=total_score,
-            interpretation=interpretation,
+            interpretation=interpretation or "Pending",
             section_scores=session.get("section_scores", {}),
             requires_manual_review=session.get("requires_manual_review", False),
             completed_at=session.get("updated_at", session["created_at"])
         ))
-    
+
     return history

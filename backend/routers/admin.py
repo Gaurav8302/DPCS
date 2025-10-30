@@ -54,15 +54,22 @@ async def get_dashboard_stats():
     }
     
     for session in all_sessions:
-        score = session.get("total_score", 0.0)
-        if score >= 26:
-            interpretation_dist["Normal"] += 1
-        elif score >= 18:
-            interpretation_dist["Mild"] += 1
-        elif score >= 10:
-            interpretation_dist["Moderate"] += 1
+        # Use stored interpretation if available
+        interpretation = session.get("interpretation")
+        if interpretation:
+            interp_key = interpretation if interpretation in interpretation_dist else "Severe"
+            interpretation_dist[interp_key] += 1
         else:
-            interpretation_dist["Severe"] += 1
+            # Fallback to score-based calculation
+            score = session.get("total_score", 0.0)
+            if score >= 26:
+                interpretation_dist["Normal"] += 1
+            elif score >= 18:
+                interpretation_dist["Mild"] += 1
+            elif score >= 10:
+                interpretation_dist["Moderate"] += 1
+            else:
+                interpretation_dist["Severe"] += 1
     
     # Get total users
     all_users = await users_collection.find({})
@@ -109,21 +116,9 @@ async def get_all_sessions(
         if not user:
             continue
         
-        total_score = session.get("total_score", 0.0)
-        
-        # Apply education adjustment
-        if user.get("education_level") != "college_level":
-            total_score = min(total_score + 1, 30)
-        
-        # Determine interpretation
-        if total_score >= 26:
-            interpretation = "Normal"
-        elif total_score >= 18:
-            interpretation = "Mild"
-        elif total_score >= 10:
-            interpretation = "Moderate"
-        else:
-            interpretation = "Severe"
+        # Use stored values from session aggregation
+        total_score = float(session.get("total_score", 0.0))
+        interpretation = session.get("interpretation") or "Pending"
         
         session_summaries.append(SessionSummary(
             session_id=session["_id"],

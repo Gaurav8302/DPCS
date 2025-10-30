@@ -1,11 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter
+from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from datetime import datetime
-import uuid
 
-from database import get_collection, ResultCreate, ResultInDB
-from utils.scoring import (
+from utils import (
     score_trail_making,
     score_cube_copy,
     score_clock_drawing,
@@ -16,10 +13,44 @@ from utils.scoring import (
     score_sentence_repetition,
     score_verbal_fluency,
     score_abstraction,
-    score_delayed_recall
+    score_delayed_recall,
+    record_section_result,
 )
 
 router = APIRouter()
+
+async def _save_section_result(
+    *,
+    session_id: str,
+    user_id: str,
+    section_name: str,
+    result_payload: Dict[str, Any],
+    details: Dict[str, Any],
+    max_score: Optional[float] = None,
+) -> Dict[str, Any]:
+    """Persist a section result and update session aggregates."""
+
+    session_state = await record_section_result(
+        session_id=session_id,
+        user_id=user_id,
+        section_name=section_name,
+        raw_score=float(result_payload.get("score", 0.0)),
+        confidence=float(result_payload.get("confidence", 0.0)),
+        requires_manual_review=bool(result_payload.get("requires_manual_review", False)),
+        details=details,
+        max_score=max_score,
+    )
+
+    # Bubble up aggregate flags so API responses reflect session state
+    if isinstance(result_payload, dict):
+        if "requires_manual_review" in session_state:
+            result_payload["requires_manual_review"] = bool(session_state["requires_manual_review"])
+        if "total_score" in session_state:
+            result_payload.setdefault("total_score", session_state["total_score"])
+        if "interpretation" in session_state and session_state["interpretation"]:
+            result_payload.setdefault("interpretation", session_state["interpretation"])
+
+    return session_state
 
 # Trail Making Request/Response Models
 class TrailMakingRequest(BaseModel):
@@ -47,25 +78,18 @@ async def score_trail_making_test(data: TrailMakingRequest):
         data.node_positions,
         data.crossing_errors
     )
-    
-    # Store result
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "trail_making",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="trail_making",
+        result_payload=result,
+        details={
             "crossing_errors": result["crossing_errors"],
-            "sequence_correct": result["sequence_correct"]
+            "sequence_correct": result["sequence_correct"],
         },
-        "requires_manual_review": result["requires_manual_review"],
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=1.0,
+    )
+
     return TrailMakingResponse(**result)
 
 # Cube/Figure Copy Models
@@ -91,25 +115,18 @@ async def score_cube_copy_test(data: CubeCopyRequest):
         data.image_data,
         data.shapes_to_copy
     )
-    
-    # Store result
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "cube_copy",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="cube_copy",
+        result_payload=result,
+        details={
             "shape_scores": result["shape_scores"],
-            "shapes_tested": data.shapes_to_copy
+            "shapes_tested": data.shapes_to_copy,
         },
-        "requires_manual_review": result["requires_manual_review"],
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=3.0,
+    )
+
     return CubeCopyResponse(**result)
 
 # Clock Drawing Models
@@ -137,27 +154,20 @@ async def score_clock_drawing_test(data: ClockDrawingRequest):
         data.image_data,
         data.target_time
     )
-    
-    # Store result
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "clock_drawing",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="clock_drawing",
+        result_payload=result,
+        details={
             "contour_score": result["scores"]["contour"],
             "numbers_score": result["scores"]["numbers"],
             "hands_score": result["scores"]["hands"],
-            "target_time": data.target_time
+            "target_time": data.target_time,
         },
-        "requires_manual_review": result["requires_manual_review"],
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=3.0,
+    )
+
     return ClockDrawingResponse(**result)
 
 # Naming Models
@@ -179,25 +189,18 @@ async def score_naming_test(data: NamingRequest):
     - Accepts similar spellings (≥0.6 similarity)
     """
     result = score_naming(data.responses)
-    
-    # Store result
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "naming",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="naming",
+        result_payload=result,
+        details={
             "responses": data.responses,
-            "individual_scores": result["individual_scores"]
+            "individual_scores": result["individual_scores"],
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=3.0,
+    )
+
     return NamingResponse(**result)
 
 # Attention Models
@@ -216,48 +219,36 @@ class AttentionResponse(BaseModel):
 async def score_attention_forward_test(data: AttentionRequest):
     """Score forward digit span - 1 point for correct sequence"""
     result = score_attention_forward(data.user_response, data.correct_sequence)
-    
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "attention_forward",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="attention_forward",
+        result_payload=result,
+        details={
             "user_response": data.user_response,
-            "correct_sequence": data.correct_sequence
+            "correct_sequence": data.correct_sequence,
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=1.0,
+    )
+
     return AttentionResponse(**result)
 
 @router.post("/attention/backward", response_model=AttentionResponse)
 async def score_attention_backward_test(data: AttentionRequest):
     """Score backward digit span - 1 point for correct reversed sequence"""
     result = score_attention_backward(data.user_response, data.correct_sequence)
-    
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "attention_backward",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="attention_backward",
+        result_payload=result,
+        details={
             "user_response": data.user_response,
-            "correct_sequence": data.correct_sequence
+            "correct_sequence": data.correct_sequence,
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=1.0,
+    )
+
     return AttentionResponse(**result)
 
 class VigilanceRequest(BaseModel):
@@ -288,25 +279,19 @@ async def score_attention_vigilance_test(data: VigilanceRequest):
         data.target_indices,
         data.total_targets
     )
-    
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "attention_vigilance",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="attention_vigilance",
+        result_payload=result,
+        details={
             "hits": result["hits"],
             "misses": result["misses"],
-            "false_alarms": result["false_alarms"]
+            "false_alarms": result["false_alarms"],
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=3.0,
+    )
+
     return VigilanceResponse(**result)
 
 # Language Models
@@ -329,24 +314,18 @@ async def score_sentence_repetition_test(data: SentenceRepetitionRequest):
     - <0.7: 0 points
     """
     result = score_sentence_repetition(data.sentences)
-    
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "sentence_repetition",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="sentence_repetition",
+        result_payload=result,
+        details={
             "sentences": data.sentences,
-            "individual_scores": result["individual_scores"]
+            "individual_scores": result["individual_scores"],
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=2.0,
+    )
+
     return SentenceRepetitionResponse(**result)
 
 class VerbalFluencyRequest(BaseModel):
@@ -369,25 +348,19 @@ async def score_verbal_fluency_test(data: VerbalFluencyRequest):
     - <11 words: 0 points
     """
     result = score_verbal_fluency(data.transcript)
-    
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "verbal_fluency",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="verbal_fluency",
+        result_payload=result,
+        details={
             "word_count": result["word_count"],
             "unique_words": result["unique_words"],
-            "duration": data.duration_seconds
+            "duration": data.duration_seconds,
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=2.0,
+    )
+
     return VerbalFluencyResponse(**result)
 
 # Abstraction Models
@@ -407,23 +380,17 @@ async def score_abstraction_test(data: AbstractionRequest):
     - 1 point per correct answer (max 2)
     """
     result = score_abstraction(data.responses)
-    
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "abstraction",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
-            "responses": data.responses
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="abstraction",
+        result_payload=result,
+        details={
+            "responses": data.responses,
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=2.0,
+    )
+
     return AbstractionResponse(**result)
 
 # Delayed Recall Models
@@ -445,23 +412,17 @@ async def score_delayed_recall_test(data: DelayedRecallRequest):
     - 1 point per correctly recalled word (max 5 in MoCA, but PRD says 4)
     """
     result = score_delayed_recall(data.original_words, data.recalled_words)
-    
-    results_collection = get_collection("results")
-    result_doc = {
-        "_id": str(uuid.uuid4()),
-        "session_id": data.session_id,
-        "user_id": data.user_id,
-        "section_name": "delayed_recall",
-        "raw_score": result["score"],
-        "confidence": result["confidence"],
-        "details": {
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="delayed_recall",
+        result_payload=result,
+        details={
             "original_words": data.original_words,
             "recalled_words": data.recalled_words,
-            "matches": result["matches"]
+            "matches": result["matches"],
         },
-        "requires_manual_review": False,
-        "created_at": datetime.utcnow()
-    }
-    await results_collection.insert_one(result_doc)
-    
+        max_score=4.0,
+    )
+
     return DelayedRecallResponse(**result)
