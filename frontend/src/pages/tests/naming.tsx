@@ -3,6 +3,8 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { ArrowLeft } from 'lucide-react'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 const ANIMALS = [
   { id: 'lion', name: 'Lion', image: '/assets/animals/lion.jpg' },
   { id: 'elephant', name: 'Elephant', image: '/assets/animals/elephant.jpg' },

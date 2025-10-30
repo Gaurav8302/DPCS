@@ -3,6 +3,8 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { ArrowLeft } from 'lucide-react'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 const SENTENCES = [
   "I only know that John is the one to help today.",
   "The cat always hid under the couch when dogs were in the room."

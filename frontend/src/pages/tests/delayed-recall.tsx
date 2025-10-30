@@ -3,6 +3,8 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { ArrowLeft } from 'lucide-react'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 // These should match the words from the initial memory registration
 const WORDS_TO_RECALL = ['FACE', 'VELVET', 'CHURCH', 'DAISY', 'RED']
 

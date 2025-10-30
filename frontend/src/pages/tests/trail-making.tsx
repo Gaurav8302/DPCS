@@ -3,6 +3,8 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 interface Node {
   id: string
   x: number

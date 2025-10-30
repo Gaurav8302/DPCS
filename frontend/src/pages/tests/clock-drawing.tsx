@@ -3,6 +3,8 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { ArrowLeft, Clock, Camera, Pencil } from 'lucide-react'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 export default function ClockDrawingTest() {
   const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement>(null)

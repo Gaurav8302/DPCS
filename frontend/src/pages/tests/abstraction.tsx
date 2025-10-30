@@ -3,6 +3,8 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { ArrowLeft } from 'lucide-react'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 const WORD_PAIRS = [
   { pair: ['banana', 'orange'], similarity: 'fruit' },
   { pair: ['train', 'bicycle'], similarity: 'transportation' }

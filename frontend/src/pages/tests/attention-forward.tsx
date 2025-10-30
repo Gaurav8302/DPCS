@@ -3,6 +3,8 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { ArrowLeft } from 'lucide-react'
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 export default function AttentionForwardTest() {
   const router = useRouter()
   const [sequence, setSequence] = useState<number[]>([])
