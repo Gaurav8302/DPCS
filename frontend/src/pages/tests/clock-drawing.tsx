@@ -40,15 +40,42 @@ export default function ClockDrawingTest() {
     // Setup canvas
     const canvas = canvasRef.current
     if (canvas) {
+      // Set canvas size to match its display size
+      const rect = canvas.getBoundingClientRect()
+      canvas.width = rect.width
+      canvas.height = rect.height
+      
       const ctx = canvas.getContext('2d')
       if (ctx) {
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 3
         ctx.strokeStyle = '#000'
         setContext(ctx)
       }
     }
+    
+    // Resize canvas on window resize
+    const handleResize = () => {
+      const canvas = canvasRef.current
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect()
+        canvas.width = rect.width
+        canvas.height = rect.height
+        
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+          ctx.lineWidth = 3
+          ctx.strokeStyle = '#000'
+          setContext(ctx)
+        }
+      }
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
 
     return () => {
       if (cameraStream) {
@@ -102,10 +129,8 @@ export default function ClockDrawingTest() {
     const canvas = canvasRef.current
     if (canvas) {
       const rect = canvas.getBoundingClientRect()
-      const scaleX = canvas.width / rect.width
-      const scaleY = canvas.height / rect.height
-      const x = (e.clientX - rect.left) * scaleX
-      const y = (e.clientY - rect.top) * scaleY
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
       context.beginPath()
       context.moveTo(x, y)
     }
@@ -116,10 +141,8 @@ export default function ClockDrawingTest() {
     const canvas = canvasRef.current
     if (canvas) {
       const rect = canvas.getBoundingClientRect()
-      const scaleX = canvas.width / rect.width
-      const scaleY = canvas.height / rect.height
-      const x = (e.clientX - rect.left) * scaleX
-      const y = (e.clientY - rect.top) * scaleY
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
       context.lineTo(x, y)
       context.stroke()
     }
@@ -258,9 +281,8 @@ export default function ClockDrawingTest() {
               <>
                 <canvas
                   ref={canvasRef}
-                  width={600}
-                  height={600}
                   className="border-2 border-gray-300 rounded-lg w-full max-w-2xl mx-auto cursor-crosshair"
+                  style={{ aspectRatio: '1/1' }}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
