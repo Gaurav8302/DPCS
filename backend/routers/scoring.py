@@ -29,17 +29,24 @@ async def _save_section_result(
     max_score: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Persist a section result and update session aggregates."""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Saving result for session={session_id}, user={user_id}, section={section_name}")
 
-    session_state = await record_section_result(
-        session_id=session_id,
-        user_id=user_id,
-        section_name=section_name,
-        raw_score=float(result_payload.get("score", 0.0)),
-        confidence=float(result_payload.get("confidence", 0.0)),
-        requires_manual_review=bool(result_payload.get("requires_manual_review", False)),
-        details=details,
-        max_score=max_score,
-    )
+    try:
+        session_state = await record_section_result(
+            session_id=session_id,
+            user_id=user_id,
+            section_name=section_name,
+            raw_score=float(result_payload.get("score", 0.0)),
+            confidence=float(result_payload.get("confidence", 0.0)),
+            requires_manual_review=bool(result_payload.get("requires_manual_review", False)),
+            details=details,
+            max_score=max_score,
+        )
+    except Exception as e:
+        logger.error(f"Error saving section result: {e}", exc_info=True)
+        raise
 
     # Bubble up aggregate flags so API responses reflect session state
     if isinstance(result_payload, dict):

@@ -187,7 +187,7 @@ export default function TrailMakingTest() {
         return acc
       }, {} as Record<string, {x: number, y: number}>)
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      console.log('Submitting trail making:', { sessionId, userId, pathLength: userPath.length })
       const response = await fetch(`${apiUrl}/api/score/trail-making`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,7 +207,8 @@ export default function TrailMakingTest() {
         // Navigate to next test
         router.push('/tests/cube-copy')
       } else {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
         alert(`Failed to submit results: ${errorData.detail || 'Please try again'}`)
       }
     } catch (error) {
