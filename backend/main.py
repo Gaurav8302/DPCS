@@ -33,23 +33,28 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Configuration - Allow local development origins
+# CORS Configuration - Allow frontend origins
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 
-# Add common local development origins if not already present
+# Add common origins
 default_local_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "https://dpcs-722m.vercel.app",  # Production Vercel deployment
 ]
 
-# Merge with environment origins
+# Merge with environment origins and add wildcard for Vercel preview deployments
 all_origins = list(set([origin.strip() for origin in allowed_origins] + default_local_origins))
+
+# Also allow all Vercel preview deployments
+allow_origin_regex = r"https://.*\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=all_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

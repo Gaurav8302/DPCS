@@ -30,8 +30,17 @@ async def _save_section_result(
 ) -> Dict[str, Any]:
     """Persist a section result and update session aggregates."""
     import logging
+    from fastapi import HTTPException, status
+    
     logger = logging.getLogger(__name__)
     logger.info(f"Saving result for session={session_id}, user={user_id}, section={section_name}")
+
+    if not session_id or not user_id:
+        logger.error("Missing session_id or user_id")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing session_id or user_id"
+        )
 
     try:
         session_state = await record_section_result(
@@ -44,9 +53,14 @@ async def _save_section_result(
             details=details,
             max_score=max_score,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error saving section result: {e}", exc_info=True)
-        raise
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save result: {str(e)}"
+        )
 
     # Bubble up aggregate flags so API responses reflect session state
     if isinstance(result_payload, dict):
