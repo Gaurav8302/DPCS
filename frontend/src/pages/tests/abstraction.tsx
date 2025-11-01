@@ -52,15 +52,21 @@ export default function Abstraction() {
         })
       })
       
-      if (!response.ok) {
-        throw new Error('Failed to submit abstraction test')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Abstraction Result:', result)
+        router.push('/tests/delayed-recall')
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/delayed-recall')
       }
-      
-      router.push('/tests/delayed-recall')
       
     } catch (error) {
       console.error('Error submitting abstraction:', error)
-      alert('Failed to submit test. Please try again.')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/delayed-recall')
     } finally {
       setLoading(false)
     }

@@ -50,15 +50,21 @@ export default function DelayedRecall() {
         })
       })
       
-      if (!response.ok) {
-        throw new Error('Failed to submit delayed recall')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Delayed Recall Result:', result)
+        router.push('/tests/orientation')
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/orientation')
       }
-      
-      router.push('/tests/orientation')
       
     } catch (error) {
       console.error('Error submitting delayed recall:', error)
-      alert('Failed to submit test. Please try again.')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/orientation')
     } finally {
       setLoading(false)
     }

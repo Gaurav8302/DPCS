@@ -83,16 +83,22 @@ export default function AttentionBackward() {
         })
       })
       
-      if (!response.ok) {
-        throw new Error('Failed to submit attention backward test')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Backward Attention Result:', result)
+        // Navigate to next test (vigilance)
+        router.push('/tests/attention-vigilance')
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/attention-vigilance')
       }
-      
-      // Navigate to next test (vigilance)
-      router.push('/tests/attention-vigilance')
       
     } catch (error) {
       console.error('Error submitting attention backward:', error)
-      alert('Failed to submit test. Please try again.')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/attention-vigilance')
     } finally {
       setLoading(false)
     }

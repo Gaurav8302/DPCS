@@ -73,11 +73,15 @@ export default function AttentionForwardTest() {
         alert(`Score: ${result.score}/1${result.correct ? ' ✓ Correct!' : ' ✗ Incorrect'}`)
         router.push('/tests/attention-backward')
       } else {
-        alert('Failed to submit results')
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/attention-backward')
       }
     } catch (error) {
       console.error('Error submitting:', error)
-      alert('Error submitting results')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/attention-backward')
     } finally {
       setSubmitting(false)
     }

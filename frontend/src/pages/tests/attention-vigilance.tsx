@@ -90,16 +90,22 @@ export default function AttentionVigilance() {
         })
       })
       
-      if (!response.ok) {
-        throw new Error('Failed to submit vigilance test')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Vigilance Attention Result:', result)
+        // Navigate to next test
+        router.push('/tests/sentence-repetition')
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/sentence-repetition')
       }
-      
-      // Navigate to next test
-      router.push('/tests/sentence-repetition')
       
     } catch (error) {
       console.error('Error submitting vigilance:', error)
-      alert('Failed to submit test. Please try again.')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/sentence-repetition')
     } finally {
       setLoading(false)
     }

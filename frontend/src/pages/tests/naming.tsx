@@ -77,11 +77,15 @@ export default function NamingTest() {
         alert(`Score: ${result.score}/3`)
         router.push('/tests/attention-forward')
       } else {
-        alert('Failed to submit results')
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/attention-forward')
       }
     } catch (error) {
       console.error('Error submitting:', error)
-      alert('Error submitting results')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/attention-forward')
     } finally {
       setSubmitting(false)
     }

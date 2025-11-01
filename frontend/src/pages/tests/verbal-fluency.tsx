@@ -84,15 +84,21 @@ export default function VerbalFluency() {
         })
       })
       
-      if (!response.ok) {
-        throw new Error('Failed to submit verbal fluency')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Verbal Fluency Result:', result)
+        router.push('/tests/abstraction')
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/abstraction')
       }
-      
-      router.push('/tests/abstraction')
       
     } catch (error) {
       console.error('Error submitting verbal fluency:', error)
-      alert('Failed to submit test. Please try again.')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/abstraction')
     } finally {
       setLoading(false)
     }

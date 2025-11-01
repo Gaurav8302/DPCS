@@ -200,11 +200,15 @@ export default function ClockDrawingTest() {
         
         router.push('/tests/naming')
       } else {
-        alert('Failed to submit results')
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
+        router.push('/tests/naming')
       }
     } catch (error) {
       console.error('Error submitting:', error)
-      alert('Error submitting results')
+      alert('Unable to connect to server. Proceeding to next test...')
+      router.push('/tests/naming')
     } finally {
       setSubmitting(false)
     }

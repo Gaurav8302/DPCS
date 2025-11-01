@@ -108,16 +108,22 @@ export default function Orientation() {
         })
       })
       
-      if (!response.ok) {
-        throw new Error('Failed to submit orientation')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Orientation Result:', result)
+        // This is the last test - redirect to results
+        router.push('/dashboard')
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
+        console.error('Submission error:', errorData)
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to dashboard...`)
+        router.push('/dashboard')
       }
-      
-      // This is the last test - redirect to results
-      router.push('/dashboard')
       
     } catch (error) {
       console.error('Error submitting orientation:', error)
-      alert('Failed to submit test. Please try again.')
+      alert('Unable to connect to server. Proceeding to dashboard...')
+      router.push('/dashboard')
     } finally {
       setLoading(false)
     }
