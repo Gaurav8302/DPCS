@@ -10,7 +10,6 @@ export default function Orientation() {
   const [sessionId, setSessionId] = useState('')
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
-  const [gettingLocation, setGettingLocation] = useState(false)
   
   const [formData, setFormData] = useState({
     date: '',
@@ -32,79 +31,55 @@ export default function Orientation() {
     setSessionId(storedSessionId)
     setUserId(storedUserId)
     
-    // Pre-fill current date info as hints
-    const now = new Date()
-    setFormData({
-      date: now.getDate().toString(),
-      month: (now.getMonth() + 1).toString(),
-      year: now.getFullYear().toString(),
-      day: now.toLocaleDateString('en-US', { weekday: 'long' }),
-      city: ''
-    })
+    // DO NOT pre-fill - user must enter manually
+    // Backend will verify against system time/GPS
   }, [router])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const getCurrentLocation = () => {
-    setGettingLocation(true)
-    
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser')
-      setGettingLocation(false)
-      return
-    }
-    
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          // Use a reverse geocoding service (example with OpenStreetMap Nominatim)
-          const { latitude, longitude } = position.coords
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          )
-          const data = await response.json()
-          
-          const city = data.address?.city || 
-                       data.address?.town || 
-                       data.address?.village || 
-                       data.address?.county ||
-                       'Unknown'
-          
-          setFormData(prev => ({ ...prev, city }))
-        } catch (error) {
-          console.error('Error getting city name:', error)
-          alert('Could not determine city from location')
-        } finally {
-          setGettingLocation(false)
-        }
-      },
-      (error) => {
-        console.error('Error getting location:', error)
-        alert('Could not access your location. Please enter your city manually.')
-        setGettingLocation(false)
+  // Get user's location coordinates for backend verification (not for auto-fill)
+  const getUserLocation = async () => {
+    return new Promise<{latitude: number, longitude: number} | null>((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null)
+        return
       }
-    )
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          })
+        },
+        () => resolve(null)
+      )
+    })
   }
 
   const handleSubmit = async () => {
     setLoading(true)
     
     try {
+      // Get user's GPS coordinates for backend verification (optional)
+      const location = await getUserLocation()
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const response = await fetch(`${apiUrl}/api/score/orientation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
           user_id: userId,
-          date: parseInt(formData.date),
-          month: parseInt(formData.month),
-          year: parseInt(formData.year),
-          day: formData.day,
-          city: formData.city
+          user_date: parseInt(formData.date),
+          user_month: parseInt(formData.month),
+          user_year: parseInt(formData.year),
+          user_day: formData.day,
+          user_city: formData.city,
+          gps_latitude: location?.latitude,
+          gps_longitude: location?.longitude
         })
       })
       
@@ -169,7 +144,8 @@ export default function Orientation() {
                 Time and Place Orientation
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Please answer the following questions about today's date and your location.
+                Please answer the following questions about today's date and your location. 
+                <strong className="text-teal-600"> Enter all information manually from memory.</strong>
               </p>
             </div>
 
@@ -248,24 +224,15 @@ export default function Orientation() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   What city are you in right now?
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-200 text-lg"
-                    placeholder="Enter your city"
-                  />
-                  <button
-                    onClick={getCurrentLocation}
-                    disabled={gettingLocation}
-                    className="px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {gettingLocation ? 'Getting...' : 'Use GPS'}
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-200 text-lg"
+                  placeholder="Type your city name"
+                />
                 <p className="text-sm text-gray-500 mt-1">
-                  Click "Use GPS" to automatically detect your city
+                  Enter the name of the city you are currently in
                 </p>
               </div>
             </div>

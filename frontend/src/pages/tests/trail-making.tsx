@@ -18,6 +18,12 @@ interface Line {
   color: string
 }
 
+interface ConnectionError {
+  from: string
+  to: string
+  timestamp: number
+}
+
 const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788']
 
 export default function TrailMakingTest() {
@@ -31,6 +37,9 @@ export default function TrailMakingTest() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [connectionErrors, setConnectionErrors] = useState<ConnectionError[]>([])
+  const [showWarning, setShowWarning] = useState(false)
+  const [warningMessage, setWarningMessage] = useState('')
 
   const expectedSequence = ['1', 'A', '2', 'B', '3', 'C', '4', 'D', '5', 'E']
 
@@ -97,6 +106,27 @@ export default function TrailMakingTest() {
     if (isComplete) return
 
     const nextExpected = expectedSequence[userPath.length]
+    const clickedNode = nodes.find(n => n.id === nodeId)
+    const lastNode = userPath.length > 0 ? nodes.find(n => n.id === userPath[userPath.length - 1]) : null
+    
+    // Check for incorrect pattern: number->number or letter->letter
+    if (lastNode && clickedNode && lastNode.type === clickedNode.type && nodeId !== nextExpected) {
+      const errorMessage = lastNode.type === 'number' 
+        ? '⚠️ Warning: You connected number to number. Please alternate between numbers and letters!'
+        : '⚠️ Warning: You connected letter to letter. Please alternate between numbers and letters!'
+      
+      setWarningMessage(errorMessage)
+      setShowWarning(true)
+      setConnectionErrors([...connectionErrors, {
+        from: lastNode.id,
+        to: nodeId,
+        timestamp: Date.now()
+      }])
+      
+      // Auto-hide warning after 3 seconds
+      setTimeout(() => setShowWarning(false), 3000)
+      return
+    }
     
     if (nodeId === nextExpected) {
       const newPath = [...userPath, nodeId]
@@ -117,8 +147,10 @@ export default function TrailMakingTest() {
         setIsComplete(true)
       }
     } else {
-      // Wrong sequence - could track errors here
-      alert('Please follow the correct sequence: 1-A-2-B-3-C-4-D-5-E')
+      // Wrong sequence
+      setWarningMessage('❌ Please follow the correct sequence: 1-A-2-B-3-C-4-D-5-E')
+      setShowWarning(true)
+      setTimeout(() => setShowWarning(false), 3000)
     }
   }
 
@@ -196,7 +228,8 @@ export default function TrailMakingTest() {
           user_id: userId,
           user_path: userPath,
           node_positions: nodePositions,
-          crossing_errors: crossingErrors
+          crossing_errors: crossingErrors,
+          connection_errors: connectionErrors
         })
       })
 
@@ -260,6 +293,21 @@ export default function TrailMakingTest() {
               </div>
             </div>
           </div>
+
+          {/* Warning Alert */}
+          {showWarning && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded animate-pulse">
+              <p className="font-bold">{warningMessage}</p>
+            </div>
+          )}
+
+          {/* Connection Errors Summary */}
+          {connectionErrors.length > 0 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 mb-4 rounded">
+              <p className="font-semibold">Pattern Errors: {connectionErrors.length}</p>
+              <p className="text-sm">You've connected similar types (number→number or letter→letter)</p>
+            </div>
+          )}
 
           {/* Canvas */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -332,6 +380,8 @@ export default function TrailMakingTest() {
                     setUserPath([])
                     setLines([])
                     setCrossingErrors(0)
+                    setConnectionErrors([])
+                    setShowWarning(false)
                   }}
                   className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
                 >

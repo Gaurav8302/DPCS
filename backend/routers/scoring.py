@@ -80,6 +80,7 @@ class TrailMakingRequest(BaseModel):
     user_path: List[str]  # Ordered list of node IDs clicked
     node_positions: Dict[str, Dict[str, float]]  # {node_id: {x, y}}
     crossing_errors: int = 0
+    connection_errors: List[Dict[str, Any]] = []  # Pattern errors (number->number, letter->letter)
 
 class TrailMakingResponse(BaseModel):
     score: int
@@ -107,6 +108,8 @@ async def score_trail_making_test(data: TrailMakingRequest):
         details={
             "crossing_errors": result["crossing_errors"],
             "sequence_correct": result["sequence_correct"],
+            "connection_errors": data.connection_errors,
+            "pattern_error_count": len(data.connection_errors),
         },
         max_score=1.0,
     )
@@ -388,17 +391,19 @@ async def score_verbal_fluency_test(data: VerbalFluencyRequest):
 class AbstractionRequest(BaseModel):
     session_id: str
     user_id: str
-    responses: List[Dict[str, str]]  # [{pair: "train-bicycle", answer: "means of transportation", correct: True}]
+    responses: List[str]  # Selected answers (e.g., ["fruit", "transportation"])
 
 class AbstractionResponse(BaseModel):
     score: int  # 0-2
     confidence: float
+    correct_answers: List[str]
 
 @router.post("/abstraction", response_model=AbstractionResponse)
 async def score_abstraction_test(data: AbstractionRequest):
     """
-    Score abstraction test
+    Score abstraction test with multiple choice
     - 1 point per correct answer (max 2)
+    - Correct answers: "fruit" and "transportation"
     """
     result = score_abstraction(data.responses)
     await _save_section_result(
@@ -407,7 +412,8 @@ async def score_abstraction_test(data: AbstractionRequest):
         section_name="abstraction",
         result_payload=result,
         details={
-            "responses": data.responses,
+            "user_responses": data.responses,
+            "correct_answers": result.get("correct_answers", []),
         },
         max_score=2.0,
     )
@@ -418,19 +424,19 @@ async def score_abstraction_test(data: AbstractionRequest):
 class DelayedRecallRequest(BaseModel):
     session_id: str
     user_id: str
-    original_words: List[str]
-    recalled_words: List[str]
+    original_words: List[str]  # Words shown during learning phase
+    recalled_words: List[str]  # Words user recalled
 
 class DelayedRecallResponse(BaseModel):
-    score: int  # 0-4
+    score: int  # 0-5
     confidence: float
     matches: List[Dict[str, Any]]
 
 @router.post("/delayed-recall", response_model=DelayedRecallResponse)
 async def score_delayed_recall_test(data: DelayedRecallRequest):
     """
-    Score delayed recall with fuzzy matching
-    - 1 point per correctly recalled word (max 5 in MoCA, but PRD says 4)
+    Score delayed recall with fuzzy matching (≥60% similarity)
+    - 1 point per correctly recalled word (max 5)
     """
     result = score_delayed_recall(data.original_words, data.recalled_words)
     await _save_section_result(
@@ -443,7 +449,66 @@ async def score_delayed_recall_test(data: DelayedRecallRequest):
             "recalled_words": data.recalled_words,
             "matches": result["matches"],
         },
-        max_score=4.0,
+        max_score=5.0,
     )
+
+    return DelayedRecallResponse(**result)
+
+# Orientation Models
+class OrientationRequest(BaseModel):
+    session_id: str
+    user_id: str
+    user_date: int
+    user_month: int
+    user_year: int
+    user_day: str
+    user_city: str
+    gps_latitude: Optional[float] = None
+    gps_longitude: Optional[float] = None
+
+class OrientationResponse(BaseModel):
+    score: int  # 0-6
+    confidence: float
+    verification: Dict[str, Any]
+
+@router.post("/orientation", response_model=OrientationResponse)
+async def score_orientation_test(data: OrientationRequest):
+    """
+    Score orientation test
+    - Verify user inputs against system time and GPS
+    - 1 point each for correct: date, month, year, day, city, place (max 6)
+    """
+    from utils import score_orientation
+    
+    result = score_orientation(
+        user_date=data.user_date,
+        user_month=data.user_month,
+        user_year=data.user_year,
+        user_day=data.user_day,
+        user_city=data.user_city,
+        gps_latitude=data.gps_latitude,
+        gps_longitude=data.gps_longitude
+    )
+    
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="orientation",
+        result_payload=result,
+        details={
+            "user_inputs": {
+                "date": data.user_date,
+                "month": data.user_month,
+                "year": data.user_year,
+                "day": data.user_day,
+                "city": data.user_city,
+            },
+            "verification": result["verification"],
+            "gps_provided": data.gps_latitude is not None,
+        },
+        max_score=6.0,
+    )
+
+    return OrientationResponse(**result)
 
     return DelayedRecallResponse(**result)

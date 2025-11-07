@@ -128,11 +128,23 @@ class FirestoreCollection:
     async def find_one(self, query: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Find a single document matching the query"""
         try:
+            # Special handling for _id queries (document ID in Firestore)
+            if "_id" in query and len(query) == 1:
+                doc_id = query["_id"]
+                doc = self.collection_ref.document(doc_id).get()
+                if doc.exists:
+                    data = doc.to_dict()
+                    data["_id"] = doc.id
+                    return data
+                return None
+            
+            # For other queries, use where clauses
             docs = self.collection_ref.limit(1)
             
             # Apply query filters
             for key, value in query.items():
-                docs = docs.where(key, "==", value)
+                if key != "_id":  # Skip _id as it's not a field
+                    docs = docs.where(key, "==", value)
             
             results = docs.get()
             

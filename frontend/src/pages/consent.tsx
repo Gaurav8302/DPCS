@@ -24,7 +24,7 @@ export default function Consent() {
 
     try {
       // Create user in backend
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const response = await fetch(`${apiUrl}/api/users`, {
         method: 'POST',
         headers: {

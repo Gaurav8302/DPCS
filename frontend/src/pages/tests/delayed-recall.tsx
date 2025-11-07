@@ -5,27 +5,44 @@ import { ArrowLeft } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-// These should match the words from the initial memory registration
-const WORDS_TO_RECALL = ['FACE', 'VELVET', 'CHURCH', 'DAISY', 'RED']
-
 export default function DelayedRecall() {
   const router = useRouter()
   const [sessionId, setSessionId] = useState('')
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
   const [userWords, setUserWords] = useState<string[]>(['', '', '', '', ''])
+  const [originalWords, setOriginalWords] = useState<string[]>([])
+  const [learningCompleted, setLearningCompleted] = useState(false)
 
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem('session_id')
     const storedUserId = sessionStorage.getItem('user_id')
+    const storedWords = sessionStorage.getItem('memory_words')
+    const learningDone = sessionStorage.getItem('memory_learning_completed')
     
     if (!storedSessionId || !storedUserId) {
       router.push('/consent')
       return
     }
     
+    if (!learningDone || !storedWords) {
+      // Redirect to learning phase if not completed
+      alert('Please complete the memory learning phase first')
+      router.push('/tests/memory-learning')
+      return
+    }
+    
     setSessionId(storedSessionId)
     setUserId(storedUserId)
+    setLearningCompleted(true)
+    
+    try {
+      const words = JSON.parse(storedWords)
+      setOriginalWords(words)
+    } catch (e) {
+      console.error('Error parsing stored words:', e)
+      setOriginalWords(['FACE', 'VELVET', 'CHURCH', 'DAISY', 'RED'])
+    }
   }, [router])
 
   const handleWordChange = (index: number, value: string) => {
@@ -39,14 +56,15 @@ export default function DelayedRecall() {
     
     try {
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const response = await fetch(`${apiUrl}/api/score/delayed-recall`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
           user_id: userId,
-          recalled_words: userWords.filter(w => w.trim())
+          recalled_words: userWords.filter(w => w.trim()),
+          original_words: originalWords
         })
       })
       
@@ -70,7 +88,7 @@ export default function DelayedRecall() {
     }
   }
 
-  if (!sessionId) {
+  if (!sessionId || !learningCompleted) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
@@ -139,10 +157,10 @@ export default function DelayedRecall() {
               ))}
             </div>
 
-            <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 max-w-xl mx-auto">
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 max-w-xl mx-auto">
               <p className="text-sm text-yellow-800">
-                💡 <strong>Hint:</strong> Think back to the very beginning of the assessment. 
-                The words were: a texture, a place, a color, and two other things.
+                💡 <strong>Hint:</strong> Think back to the learning phase at the beginning. 
+                Try to remember the {originalWords.length} words you studied for 30 seconds.
               </p>
             </div>
 

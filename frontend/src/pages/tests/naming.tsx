@@ -6,12 +6,13 @@ import { ArrowLeft } from 'lucide-react'
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const ANIMALS = [
-  { id: 'lion', name: 'Lion', image: '/assets/animals/lion.jpg' },
-  { id: 'elephant', name: 'Elephant', image: '/assets/animals/elephant.jpg' },
-  { id: 'rhinoceros', name: 'Rhinoceros', image: '/assets/animals/rhinoceros.jpg' },
-  { id: 'camel', name: 'Camel', image: '/assets/animals/camel.jpg' },
-  { id: 'giraffe', name: 'Giraffe', image: '/assets/animals/giraffe.jpg' },
-  { id: 'zebra', name: 'Zebra', image: '/assets/animals/zebra.jpg' }
+  { id: 'lion', name: 'Lion', image: '/animal_assets/lion.webp' },
+  { id: 'elephant', name: 'Elephant', image: '/animal_assets/elephant.jpg' },
+  { id: 'bear', name: 'Bear', image: '/animal_assets/bear.avif' },
+  { id: 'dog', name: 'Dog', image: '/animal_assets/dog.webp' },
+  { id: 'fish', name: 'Fish', image: '/animal_assets/fish.jpg' },
+  { id: 'snake', name: 'Snake', image: '/animal_assets/snake.jpg' },
+  { id: 'zebra', name: 'Zebra', image: '/animal_assets/zebra.jpg' }
 ]
 
 export default function NamingTest() {
@@ -35,8 +36,12 @@ export default function NamingTest() {
     setUserId(storedUserId)
     setSessionId(storedSessionId)
     
-    // Randomize 3 animals
-    const shuffled = [...ANIMALS].sort(() => 0.5 - Math.random())
+    // Randomize 3 unique animals using Fisher-Yates shuffle
+    const shuffled = [...ANIMALS]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
     setSelectedAnimals(shuffled.slice(0, 3))
   }, [])
 
@@ -74,7 +79,14 @@ export default function NamingTest() {
       if (response.ok) {
         const result = await response.json()
         console.log('Naming Result:', result)
-        alert(`Score: ${result.score}/3`)
+        
+        // Show detailed results with similarity scores
+        const detailsMsg = result.individual_scores
+          .map((s: any, i: number) => 
+            `${i+1}. ${selectedAnimals[i].name}: "${s.user_answer}" - ${s.score ? '✓' : '✗'} (${Math.round(s.similarity * 100)}% match)`
+          ).join('\n')
+        
+        alert(`Score: ${result.score}/3\n\n${detailsMsg}`)
         router.push('/tests/attention-forward')
       } else {
         const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
@@ -118,9 +130,17 @@ export default function NamingTest() {
               <div key={animal.id} className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex flex-col md:flex-row gap-6">
                   <div className="flex-shrink-0">
-                    <div className="w-64 h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <span className="text-4xl">🦁</span>
-                      {/* Placeholder - replace with actual images */}
+                    <div className="w-64 h-64 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-300">
+                      <img 
+                        src={animal.image} 
+                        alt={`Animal ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback if image fails to load
+                          const target = e.target as HTMLImageElement
+                          target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="256" height="256"%3E%3Crect fill="%23ddd" width="256" height="256"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage not found%3C/text%3E%3C/svg%3E'
+                        }}
+                      />
                     </div>
                   </div>
                   
@@ -135,8 +155,9 @@ export default function NamingTest() {
                       type="text"
                       value={answers[index]}
                       onChange={(e) => handleAnswerChange(index, e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
                       placeholder="Type the animal name..."
+                      autoComplete="off"
                     />
                   </div>
                 </div>

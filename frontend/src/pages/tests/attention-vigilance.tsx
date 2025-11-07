@@ -57,10 +57,10 @@ export default function AttentionVigilance() {
     setIsRunning(true)
     const sequence = generateLetterSequence()
     
-    // Show each letter for 1 second
+    // Show each letter for 3 seconds
     for (let i = 0; i < sequence.length; i++) {
       setCurrentLetter(sequence[i])
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, 3000))
     }
     
     setCurrentLetter(null)
@@ -78,7 +78,7 @@ export default function AttentionVigilance() {
     
     try {
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const response = await fetch(`${apiUrl}/api/score/attention-vigilance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -165,7 +165,7 @@ export default function AttentionVigilance() {
                 <div className="bg-purple-50 p-6 rounded-lg max-w-xl mx-auto">
                   <h3 className="font-semibold text-gray-900 mb-3">Instructions:</h3>
                   <ul className="text-left text-gray-700 space-y-2">
-                    <li>• Letters will appear for 1 second each</li>
+                    <li>• Letters will appear for 3 seconds each</li>
                     <li>• Click/tap the screen when you see the letter "A"</li>
                     <li>• Try to catch all the A's without clicking other letters</li>
                     <li>• Stay focused throughout the entire sequence</li>

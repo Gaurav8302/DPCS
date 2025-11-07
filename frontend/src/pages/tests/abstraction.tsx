@@ -6,8 +6,16 @@ import { ArrowLeft } from 'lucide-react'
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const WORD_PAIRS = [
-  { pair: ['banana', 'orange'], similarity: 'fruit' },
-  { pair: ['train', 'bicycle'], similarity: 'transportation' }
+  { 
+    pair: ['banana', 'orange'], 
+    correctAnswer: 'fruit',
+    options: ['fruit', 'vegetables', 'colors', 'shapes']
+  },
+  { 
+    pair: ['train', 'bicycle'], 
+    correctAnswer: 'transportation',
+    options: ['transportation', 'furniture', 'tools', 'electronics']
+  }
 ]
 
 export default function Abstraction() {
@@ -15,7 +23,7 @@ export default function Abstraction() {
   const [sessionId, setSessionId] = useState('')
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
-  const [answers, setAnswers] = useState<string[]>(['', ''])
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(['', ''])
 
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem('session_id')
@@ -30,10 +38,10 @@ export default function Abstraction() {
     setUserId(storedUserId)
   }, [router])
 
-  const handleAnswerChange = (index: number, value: string) => {
-    const newAnswers = [...answers]
+  const handleAnswerSelect = (index: number, value: string) => {
+    const newAnswers = [...selectedAnswers]
     newAnswers[index] = value
-    setAnswers(newAnswers)
+    setSelectedAnswers(newAnswers)
   }
 
   const handleSubmit = async () => {
@@ -41,14 +49,14 @@ export default function Abstraction() {
     
     try {
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://dpcs.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const response = await fetch(`${apiUrl}/api/score/abstraction`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
           user_id: userId,
-          responses: answers
+          responses: selectedAnswers
         })
       })
       
@@ -129,27 +137,44 @@ export default function Abstraction() {
             <div className="space-y-8">
               {WORD_PAIRS.map((item, index) => (
                 <div key={index} className="bg-gray-50 p-6 rounded-lg">
-                  <div className="mb-4">
+                  <div className="mb-6">
                     <p className="text-lg font-semibold text-gray-900 mb-2">
                       Question {index + 1}:
                     </p>
-                    <p className="text-xl text-gray-800">
+                    <p className="text-xl text-gray-800 mb-4">
                       How are a <strong className="text-indigo-600">{item.pair[0]}</strong> and a{' '}
                       <strong className="text-indigo-600">{item.pair[1]}</strong> alike?
                     </p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Your answer:
-                    </label>
-                    <input
-                      type="text"
-                      value={answers[index]}
-                      onChange={(e) => handleAnswerChange(index, e.target.value)}
-                      placeholder="Type your answer here..."
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-lg"
-                    />
+                    <p className="block text-sm font-medium text-gray-700 mb-3">
+                      Select the best answer:
+                    </p>
+                    <div className="space-y-3">
+                      {item.options.map((option, optIndex) => (
+                        <label 
+                          key={optIndex}
+                          className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                            selectedAnswers[index] === option
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-gray-300 hover:border-indigo-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`question-${index}`}
+                            value={option}
+                            checked={selectedAnswers[index] === option}
+                            onChange={() => handleAnswerSelect(index, option)}
+                            className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="ml-3 text-lg text-gray-800 capitalize">
+                            {option}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -163,14 +188,14 @@ export default function Abstraction() {
 
             <div className="flex gap-4 justify-center mt-8">
               <button
-                onClick={() => setAnswers(['', ''])}
+                onClick={() => setSelectedAnswers(['', ''])}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
               >
                 Clear Answers
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={loading || answers.some(a => !a.trim())}
+                disabled={loading || selectedAnswers.some(a => !a)}
                 className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Submitting...' : 'Submit & Continue'}
