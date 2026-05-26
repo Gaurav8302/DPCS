@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import { ArrowLeft, Mic, MicOff } from 'lucide-react'
+import { ArrowLeft, Brain, Mic, MicOff } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -15,6 +15,8 @@ export default function VerbalFluency() {
   const [words, setWords] = useState<string[]>([])
   const [currentWord, setCurrentWord] = useState('')
   const [hasStarted, setHasStarted] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [speechError, setSpeechError] = useState<string | null>(null)
 
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem('session_id')
@@ -42,6 +44,79 @@ export default function VerbalFluency() {
     
     return () => clearInterval(timer)
   }, [isRecording, timeLeft])
+
+  useEffect(() => {
+    // Initialize speech recognition
+    let recognition: any = null;
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+          
+          // Split by space in case multiple words were spoken
+          const spokenWords = transcript.split(/\s+/);
+          
+          setWords(prev => {
+            const newWords = [...prev];
+            for (const word of spokenWords) {
+              // Remove punctuation
+              const cleanWord = word.replace(/[.,!?]/g, '');
+              if (cleanWord.startsWith('f') && !newWords.includes(cleanWord)) {
+                newWords.push(cleanWord);
+              }
+            }
+            return newWords;
+          });
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error', event.error);
+          setSpeechError(event.error);
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          if (isRecording && timeLeft > 0) {
+            // Auto-restart if we're still supposed to be recording
+            try {
+              recognition?.start();
+            } catch (e) {
+              setIsListening(false);
+            }
+          } else {
+            setIsListening(false);
+          }
+        };
+      } else {
+        setSpeechError('Speech recognition is not supported in this browser.');
+      }
+    }
+
+    if (isRecording && timeLeft > 0 && recognition && !isListening) {
+      try {
+        recognition.start();
+        setIsListening(true);
+        setSpeechError(null);
+      } catch (e) {
+        console.error(e);
+      }
+    } else if ((!isRecording || timeLeft === 0) && recognition && isListening) {
+      recognition.stop();
+      setIsListening(false);
+    }
+
+    return () => {
+      if (recognition && isListening) {
+        recognition.stop();
+      }
+    };
+  }, [isRecording, timeLeft, isListening]);
 
   const startTest = () => {
     setHasStarted(true)
@@ -114,25 +189,27 @@ export default function VerbalFluency() {
         <title>Verbal Fluency | MoCA Assessment</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
-        <header className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Verbal Fluency</h1>
-                  <p className="text-sm text-gray-600">Module 9 of 12</p>
-                </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
               </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Verbal Fluency</h1>
             </div>
           </div>
-        </header>
+        </nav>
 
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-lg shadow-lg p-8">
@@ -184,30 +261,46 @@ export default function VerbalFluency() {
                   </p>
                 </div>
 
-                {/* Word Input */}
+                {/* Word Input / Speech Control */}
                 {isRecording && (
                   <div className="space-y-4">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={currentWord}
-                        onChange={(e) => setCurrentWord(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Type a word starting with F..."
-                        className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-lg"
-                        autoFocus
-                      />
-                      <button
-                        onClick={handleAddWord}
-                        disabled={!currentWord.trim()}
-                        className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
-                      >
-                        Add
-                      </button>
+                    {speechError ? (
+                       <div className="bg-red-50 p-4 rounded-lg text-red-700 mb-4">
+                         {speechError} - Please use manual input below.
+                       </div>
+                    ) : null}
+                    
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      {speechError ? (
+                        <div className="flex gap-2 w-full">
+                          <input
+                            type="text"
+                            value={currentWord}
+                            onChange={(e) => setCurrentWord(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Type a word starting with F..."
+                            className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-lg"
+                            autoFocus
+                          />
+                          <button
+                            onClick={handleAddWord}
+                            disabled={!currentWord.trim()}
+                            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center">
+                          <div className={`p-6 rounded-full ${isListening ? 'bg-red-100 animate-pulse' : 'bg-gray-100'}`}>
+                            {isListening ? <Mic className="w-12 h-12 text-red-600" /> : <MicOff className="w-12 h-12 text-gray-400" />}
+                          </div>
+                          <p className="mt-4 text-lg font-medium text-gray-700">
+                            {isListening ? 'Listening... Speak words starting with F' : 'Microphone is off'}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600 text-center">
-                      Press Enter or click Add after each word
-                    </p>
                   </div>
                 )}
 

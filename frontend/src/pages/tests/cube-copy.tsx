@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { ArrowLeft, Camera, Pencil } from 'lucide-react'
+import { ArrowLeft, Brain, Camera, Pencil } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -254,28 +254,32 @@ export default function CubeCopyTest() {
   return (
     <>
       <Head>
-        <title>Shape Drawing Test - Dimentia Project</title>
+        <title>Shape Drawing Test | MoCA Digital</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              2D/3D Shape Drawing Test
-            </h1>
-            <p className="text-gray-600">
-              Copy the shapes shown below as accurately as possible
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Shape Drawing</h1>
+            </div>
           </div>
+        </nav>
+
+        <div className="max-w-6xl mx-auto px-4 py-8">
 
           {/* Shapes to Copy */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">

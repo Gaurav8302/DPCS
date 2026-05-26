@@ -7,10 +7,15 @@ from .scoring import (
     score_attention_forward,
     score_attention_backward,
     score_attention_vigilance,
+    score_attention_serial7,
     score_sentence_repetition,
     score_verbal_fluency,
     score_abstraction,
-    score_delayed_recall
+    score_delayed_recall,
+    MEMORY_WORDS,
+    SENTENCES,
+    NAMING_ACCEPTABLE_ANSWERS,
+    ABSTRACTION_PAIRS,
 )
 from .session_tracker import MoCAScorer, record_section_result
 
@@ -22,10 +27,15 @@ __all__ = [
     "score_attention_forward",
     "score_attention_backward",
     "score_attention_vigilance",
+    "score_attention_serial7",
     "score_sentence_repetition",
     "score_verbal_fluency",
     "score_abstraction",
     "score_delayed_recall",
     "MoCAScorer",
     "record_section_result",
+    "MEMORY_WORDS",
+    "SENTENCES",
+    "NAMING_ACCEPTABLE_ANSWERS",
+    "ABSTRACTION_PAIRS",
 ]

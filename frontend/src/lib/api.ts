@@ -81,6 +81,11 @@ export const submitAttentionVigilance = async (data: any) => {
   return response.data
 }
 
+export const submitAttentionSerial7 = async (data: any) => {
+  const response = await api.post('/api/score/attention/serial7', data)
+  return response.data
+}
+
 export const submitSentenceRepetition = async (data: any) => {
   const response = await api.post('/api/score/language/sentence-repetition', data)
   return response.data

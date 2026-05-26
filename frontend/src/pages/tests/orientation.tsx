@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Brain } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -87,18 +87,18 @@ export default function Orientation() {
         const result = await response.json()
         console.log('Orientation Result:', result)
         // This is the last test - redirect to results
-        router.push('/dashboard')
+        router.push('/results')
       } else {
         const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
         console.error('Submission error:', errorData)
-        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to dashboard...`)
-        router.push('/dashboard')
+        alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to results...`)
+        router.push('/results')
       }
       
     } catch (error) {
       console.error('Error submitting orientation:', error)
-      alert('Unable to connect to server. Proceeding to dashboard...')
-      router.push('/dashboard')
+      alert('Unable to connect to server. Proceeding to results...')
+      router.push('/results')
     } finally {
       setLoading(false)
     }
@@ -114,25 +114,27 @@ export default function Orientation() {
         <title>Orientation | MoCA Assessment</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100">
-        <header className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Orientation</h1>
-                  <p className="text-sm text-gray-600">Module 12 of 12 - Final Test!</p>
-                </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
               </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Orientation</h1>
             </div>
           </div>
-        </header>
+        </nav>
 
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-lg shadow-lg p-8">

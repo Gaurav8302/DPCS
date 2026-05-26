@@ -1,23 +1,20 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Brain } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+// PRD-specified animals for naming test (Section 3.2)
+// These are the ONLY animals used in MoCA: Lion, Rhinoceros, Camel
 const ANIMALS = [
-  { id: 'lion', name: 'Lion', image: '/animal_assets/lion.webp' },
-  { id: 'elephant', name: 'Elephant', image: '/animal_assets/elephant.jpg' },
-  { id: 'bear', name: 'Bear', image: '/animal_assets/bear.avif' },
-  { id: 'dog', name: 'Dog', image: '/animal_assets/dog.webp' },
-  { id: 'fish', name: 'Fish', image: '/animal_assets/fish.jpg' },
-  { id: 'snake', name: 'Snake', image: '/animal_assets/snake.jpg' },
-  { id: 'zebra', name: 'Zebra', image: '/animal_assets/zebra.jpg' }
+  { id: 'lion', name: 'Lion', image: '/animal_assets/lion.webp', acceptableAnswers: ['lion'] },
+  { id: 'rhinoceros', name: 'Rhinoceros', image: '/animal_assets/rhino.png', acceptableAnswers: ['rhinoceros', 'rhino'] },
+  { id: 'camel', name: 'Camel', image: '/animal_assets/camel.png', acceptableAnswers: ['camel', 'dromedary'] }
 ]
 
 export default function NamingTest() {
   const router = useRouter()
-  const [selectedAnimals, setSelectedAnimals] = useState<typeof ANIMALS>([])
   const [answers, setAnswers] = useState<string[]>(['', '', ''])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -35,14 +32,6 @@ export default function NamingTest() {
     
     setUserId(storedUserId)
     setSessionId(storedSessionId)
-    
-    // Randomize 3 unique animals using Fisher-Yates shuffle
-    const shuffled = [...ANIMALS]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    setSelectedAnimals(shuffled.slice(0, 3))
   }, [])
 
   const handleAnswerChange = (index: number, value: string) => {
@@ -61,8 +50,8 @@ export default function NamingTest() {
     setSubmitting(true)
 
     try {
-      const responses = selectedAnimals.map((animal, index) => ({
-        animal: animal.name.toLowerCase(),
+      const responses = ANIMALS.map((animal, index) => ({
+        animal: animal.id,
         user_answer: answers[index].trim()
       }))
 
@@ -83,7 +72,7 @@ export default function NamingTest() {
         // Show detailed results with similarity scores
         const detailsMsg = result.individual_scores
           .map((s: any, i: number) => 
-            `${i+1}. ${selectedAnimals[i].name}: "${s.user_answer}" - ${s.score ? '✓' : '✗'} (${Math.round(s.similarity * 100)}% match)`
+            `${i+1}. ${ANIMALS[i].name}: "${s.user_answer}" - ${s.score ? '✓' : '✗'} (${Math.round(s.similarity * 100)}% match)`
           ).join('\n')
         
         alert(`Score: ${result.score}/3\n\n${detailsMsg}`)
@@ -106,27 +95,35 @@ export default function NamingTest() {
   return (
     <>
       <Head>
-        <title>Naming Test - Dimentia Project</title>
+        <title>Naming Test | MoCA Digital</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-100 py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <button onClick={() => router.back()} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Naming Test
-            </h1>
-            <p className="text-gray-600">
-              Name the animals shown in the images below
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Naming</h1>
+            </div>
           </div>
+        </nav>
+
+        <div className="max-w-4xl mx-auto px-4 py-8">
 
           <div className="space-y-6">
-            {selectedAnimals.map((animal, index) => (
+            {ANIMALS.map((animal, index) => (
               <div key={animal.id} className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex flex-col md:flex-row gap-6">
                   <div className="flex-shrink-0">
@@ -159,6 +156,9 @@ export default function NamingTest() {
                       placeholder="Type the animal name..."
                       autoComplete="off"
                     />
+                    <p className="text-sm text-gray-500 mt-2">
+                      Acceptable: {animal.acceptableAnswers.join(', ')}
+                    </p>
                   </div>
                 </div>
               </div>

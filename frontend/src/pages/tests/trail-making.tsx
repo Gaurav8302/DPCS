@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Brain, CheckCircle, AlertCircle } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -37,10 +37,9 @@ export default function TrailMakingTest() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [connectionErrors, setConnectionErrors] = useState<ConnectionError[]>([])
-  const [showWarning, setShowWarning] = useState(false)
-  const [warningMessage, setWarningMessage] = useState('')
+  const [sequenceErrors, setSequenceErrors] = useState<ConnectionError[]>([])
 
+  // Expected sequence for scoring (not shown to user)
   const expectedSequence = ['1', 'A', '2', 'B', '3', 'C', '4', 'D', '5', 'E']
 
   useEffect(() => {
@@ -104,53 +103,36 @@ export default function TrailMakingTest() {
 
   const handleNodeClick = (nodeId: string) => {
     if (isComplete) return
-
-    const nextExpected = expectedSequence[userPath.length]
-    const clickedNode = nodes.find(n => n.id === nodeId)
-    const lastNode = userPath.length > 0 ? nodes.find(n => n.id === userPath[userPath.length - 1]) : null
     
-    // Check for incorrect pattern: number->number or letter->letter
-    if (lastNode && clickedNode && lastNode.type === clickedNode.type && nodeId !== nextExpected) {
-      const errorMessage = lastNode.type === 'number' 
-        ? '⚠️ Warning: You connected number to number. Please alternate between numbers and letters!'
-        : '⚠️ Warning: You connected letter to letter. Please alternate between numbers and letters!'
-      
-      setWarningMessage(errorMessage)
-      setShowWarning(true)
-      setConnectionErrors([...connectionErrors, {
-        from: lastNode.id,
+    // Don't allow clicking the same node twice
+    if (userPath.includes(nodeId)) return
+
+    const newPath = [...userPath, nodeId]
+    setUserPath(newPath)
+
+    // Track if this was the correct next node (for scoring, not shown to user)
+    const expectedNext = expectedSequence[userPath.length]
+    if (nodeId !== expectedNext) {
+      setSequenceErrors([...sequenceErrors, {
+        from: userPath.length > 0 ? userPath[userPath.length - 1] : 'start',
         to: nodeId,
         timestamp: Date.now()
       }])
-      
-      // Auto-hide warning after 3 seconds
-      setTimeout(() => setShowWarning(false), 3000)
-      return
     }
-    
-    if (nodeId === nextExpected) {
-      const newPath = [...userPath, nodeId]
-      setUserPath(newPath)
 
-      // Add line with unique color
-      if (newPath.length > 1) {
-        const colorIndex = (newPath.length - 2) % COLORS.length
-        setLines([...lines, {
-          from: newPath[newPath.length - 2],
-          to: nodeId,
-          color: COLORS[colorIndex]
-        }])
-      }
+    // Add line with unique color
+    if (newPath.length > 1) {
+      const colorIndex = (newPath.length - 2) % COLORS.length
+      setLines([...lines, {
+        from: newPath[newPath.length - 2],
+        to: nodeId,
+        color: COLORS[colorIndex]
+      }])
+    }
 
-      // Check if complete
-      if (newPath.length === expectedSequence.length) {
-        setIsComplete(true)
-      }
-    } else {
-      // Wrong sequence
-      setWarningMessage('❌ Please follow the correct sequence: 1-A-2-B-3-C-4-D-5-E')
-      setShowWarning(true)
-      setTimeout(() => setShowWarning(false), 3000)
+    // Check if all nodes are connected (complete when all 10 are in path)
+    if (newPath.length === expectedSequence.length) {
+      setIsComplete(true)
     }
   }
 
@@ -229,7 +211,7 @@ export default function TrailMakingTest() {
           user_path: userPath,
           node_positions: nodePositions,
           crossing_errors: crossingErrors,
-          connection_errors: connectionErrors
+          sequence_errors: sequenceErrors
         })
       })
 
@@ -257,57 +239,45 @@ export default function TrailMakingTest() {
   return (
     <>
       <Head>
-        <title>Trail Making Test - Dimentia Project</title>
+        <title>Trail Making Test | MoCA Digital</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Trail Making Test
-            </h1>
-            <p className="text-gray-600">
-              Connect the circles in order: 1-A-2-B-3-C-4-D-5-E
-            </p>
-            
-            {/* Progress */}
-            <div className="mt-4">
-              <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Progress: {userPath.length} / {expectedSequence.length}</span>
-                <span>Expected next: <strong>{expectedSequence[userPath.length] || 'Complete!'}</strong></span>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
-                  style={{ width: `${(userPath.length / expectedSequence.length) * 100}%` }}
-                />
-              </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Trail Making</h1>
             </div>
           </div>
+        </nav>
 
-          {/* Warning Alert */}
-          {showWarning && (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded animate-pulse">
-              <p className="font-bold">{warningMessage}</p>
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* Progress - only shows how many connected, not what's next */}
+          <div className="mt-4 mb-4">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span>Connected: {userPath.length} / 10 circles</span>
+              {isComplete && <span className="text-green-600 font-semibold">Complete!</span>}
             </div>
-          )}
-
-          {/* Connection Errors Summary */}
-          {connectionErrors.length > 0 && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 mb-4 rounded">
-              <p className="font-semibold">Pattern Errors: {connectionErrors.length}</p>
-              <p className="text-sm">You've connected similar types (number→number or letter→letter)</p>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all"
+                style={{ width: `${(userPath.length / expectedSequence.length) * 100}%` }}
+              />
             </div>
-          )}
+          </div>
 
           {/* Canvas */}
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -362,13 +332,13 @@ export default function TrailMakingTest() {
             </div>
 
             {/* Instructions */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <div className="mt-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
               <h3 className="font-semibold text-gray-900 mb-2">Instructions:</h3>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Click on the circles in alternating order: 1-A-2-B-3-C-4-D-5-E</li>
-                <li>• Each connecting line will have a unique color</li>
-                <li>• Try not to cross any lines</li>
-                <li>• Click on the correct sequence - errors will be alerted</li>
+                <li>• Connect the circles by clicking on them in alternating order (number, letter, number, letter...)</li>
+                <li>• Start from 1, then go to A, then to 2, and so on</li>
+                <li>• Try to connect all circles as quickly and accurately as possible</li>
+                <li>• Each connection will be shown as a colored line</li>
               </ul>
             </div>
 
@@ -380,10 +350,9 @@ export default function TrailMakingTest() {
                     setUserPath([])
                     setLines([])
                     setCrossingErrors(0)
-                    setConnectionErrors([])
-                    setShowWarning(false)
+                    setSequenceErrors([])
                   }}
-                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
                   Reset
                 </button>

@@ -1,5 +1,5 @@
 """
-Unit tests for scoring functions
+Unit tests for scoring functions based on MoCA PRD
 Tests all cognitive assessment scoring logic
 """
 import pytest
@@ -11,10 +11,14 @@ from utils.scoring import (
     score_attention_forward,
     score_attention_backward,
     score_attention_vigilance,
+    score_attention_serial7,
     score_sentence_repetition,
     score_verbal_fluency,
     score_abstraction,
-    score_delayed_recall
+    score_delayed_recall,
+    MEMORY_WORDS,
+    SENTENCES,
+    NAMING_ACCEPTABLE_ANSWERS,
 )
 import base64
 from PIL import Image
@@ -53,38 +57,50 @@ class TestTrailMaking:
 
 
 class TestNaming:
-    """Tests for naming task scoring"""
+    """Tests for naming task scoring per PRD Section 3.2"""
     
-    def test_exact_matches(self):
-        """Test exact animal name matches"""
+    def test_exact_matches_prd_animals(self):
+        """Test exact animal name matches with PRD-specified animals"""
         responses = [
             {"animal": "lion", "user_answer": "lion"},
-            {"animal": "elephant", "user_answer": "elephant"},
-            {"animal": "giraffe", "user_answer": "giraffe"}
+            {"animal": "rhinoceros", "user_answer": "rhinoceros"},
+            {"animal": "camel", "user_answer": "camel"}
         ]
         result = score_naming(responses)
         
         assert result["score"] == 3
         assert all(s["score"] == 1 for s in result["individual_scores"])
     
+    def test_acceptable_alternatives(self):
+        """Test PRD-specified acceptable alternatives"""
+        responses = [
+            {"animal": "lion", "user_answer": "lion"},
+            {"animal": "rhinoceros", "user_answer": "rhino"},  # Acceptable per PRD
+            {"animal": "camel", "user_answer": "dromedary"}   # Acceptable per PRD
+        ]
+        result = score_naming(responses)
+        
+        # All should be accepted per PRD
+        assert result["score"] == 3
+    
     def test_fuzzy_matching(self):
         """Test fuzzy matching with similar spellings"""
         responses = [
-            {"animal": "rhinoceros", "user_answer": "rhino"},  # Should match
-            {"animal": "hippopotamus", "user_answer": "hippo"},  # Should match
-            {"animal": "elephant", "user_answer": "elefant"}  # Should match (typo)
+            {"animal": "rhinoceros", "user_answer": "rhinoceros"},  # Exact
+            {"animal": "lion", "user_answer": "leon"},  # Typo - should match (≥60%)
+            {"animal": "camel", "user_answer": "camal"}  # Typo - should match (≥60%)
         ]
         result = score_naming(responses)
         
         # Fuzzy matching should accept these
-        assert result["score"] >= 2  # At least 2 should match
+        assert result["score"] >= 2
     
     def test_incorrect_answers(self):
         """Test completely incorrect answers"""
         responses = [
             {"animal": "lion", "user_answer": "cat"},
-            {"animal": "elephant", "user_answer": "dog"},
-            {"animal": "giraffe", "user_answer": "horse"}
+            {"animal": "rhinoceros", "user_answer": "elephant"},
+            {"animal": "camel", "user_answer": "horse"}
         ]
         result = score_naming(responses)
         
@@ -113,63 +129,139 @@ class TestAttention:
         assert result["correct"] == True
     
     def test_vigilance_perfect(self):
-        """Test vigilance with 0-1 errors"""
+        """Test vigilance with 0-1 errors (PRD: 1 point)"""
         taps = [0, 3, 6, 9]  # User taps
         target_indices = [0, 3, 6, 9]  # Correct targets
         result = score_attention_vigilance(taps, target_indices, total_targets=4)
         
-        assert result["score"] == 3  # 0-1 error = 3 points
+        # PRD: 0-1 errors = 1 point (max score for vigilance)
+        assert result["score"] == 1
         assert result["hits"] == 4
         assert result["misses"] == 0
         assert result["false_alarms"] == 0
     
-    def test_vigilance_with_errors(self):
-        """Test vigilance with multiple errors"""
+    def test_vigilance_one_error(self):
+        """Test vigilance with exactly 1 error (still scores 1 point per PRD)"""
+        taps = [0, 3, 6]  # User taps (missed 9)
+        target_indices = [0, 3, 6, 9]  # Correct targets
+        result = score_attention_vigilance(taps, target_indices, total_targets=4)
+        
+        assert result["misses"] == 1
+        assert result["false_alarms"] == 0
+        assert result["total_errors"] == 1
+        # PRD: 0-1 errors = 1 point
+        assert result["score"] == 1
+    
+    def test_vigilance_with_multiple_errors(self):
+        """Test vigilance with 2+ errors (0 points per PRD)"""
         taps = [0, 1, 3, 6]  # User taps (1 is false alarm, missed 9)
         target_indices = [0, 3, 6, 9]  # Correct targets
         result = score_attention_vigilance(taps, target_indices, total_targets=4)
         
         assert result["misses"] == 1
         assert result["false_alarms"] == 1
-        # Total errors = 2, should get 2 points
+        assert result["total_errors"] == 2
+        # PRD: 2+ errors = 0 points
+        assert result["score"] == 0
+    
+    def test_serial7_perfect(self):
+        """Test Serial 7s with all correct answers (PRD: 3 points)"""
+        # 100-7=93, 93-7=86, 86-7=79, 79-7=72, 72-7=65
+        responses = [93, 86, 79, 72, 65]
+        result = score_attention_serial7(responses)
+        
+        # All 5 correct subtractions = 3 points
+        assert result["score"] == 3
+        assert result["correct_count"] == 5
+    
+    def test_serial7_four_correct(self):
+        """Test Serial 7s with 4 correct (still 3 points per PRD)"""
+        # One subtraction error in the middle
+        responses = [93, 85, 78, 71, 64]  # 85 wrong, but 85-7=78 ✓, etc.
+        result = score_attention_serial7(responses)
+        
+        # PRD: 4-5 correct = 3 points
+        assert result["correct_count"] >= 4
+        assert result["score"] == 3
+    
+    def test_serial7_two_three_correct(self):
+        """Test Serial 7s with 2-3 correct (2 points)"""
+        responses = [93, 86, 80, 75, 70]  # Only 2 correct: 93, 86
+        result = score_attention_serial7(responses)
+        
+        # PRD: 2-3 correct = 2 points
+        assert result["correct_count"] <= 3
+        assert result["score"] <= 2
+    
+    def test_serial7_one_correct(self):
+        """Test Serial 7s with 1 correct (1 point)"""
+        responses = [93, 80, 70, 60, 50]  # Only 93 is correct subtraction
+        result = score_attention_serial7(responses)
+        
+        assert result["correct_count"] == 1
+        # PRD: 1 correct = 1 point
+        assert result["score"] == 1
+    
+    def test_serial7_none_correct(self):
+        """Test Serial 7s with 0 correct (0 points)"""
+        responses = [90, 80, 70, 60, 50]  # None are -7 subtractions
+        result = score_attention_serial7(responses)
+        
+        assert result["correct_count"] == 0
+        assert result["score"] == 0
 
 
 class TestLanguage:
-    """Tests for language tasks"""
+    """Tests for language tasks per PRD Section 3.4"""
     
     def test_sentence_repetition_perfect(self):
-        """Test perfect sentence repetition"""
+        """Test perfect sentence repetition with PRD sentences"""
+        # PRD Sentence 1: "The child walked his dog in the park after midnight."
         sentences = [
-            {"original": "I only know that John is the one to help today", 
-             "user_answer": "I only know that John is the one to help today"}
+            {"original": "The child walked his dog in the park after midnight", 
+             "user_answer": "The child walked his dog in the park after midnight"}
         ]
         result = score_sentence_repetition(sentences)
         
         assert result["score"] >= 1
         assert result["individual_scores"][0]["similarity"] >= 0.8
     
-    def test_sentence_repetition_partial(self):
-        """Test partial sentence match (70-80% similarity)"""
+    def test_sentence_repetition_both_perfect(self):
+        """Test both PRD sentences perfect (2 points)"""
         sentences = [
-            {"original": "I only know that John is the one to help today",
-             "user_answer": "I only know John is the one to help today"}  # Missing "that"
+            {"original": "The child walked his dog in the park after midnight",
+             "user_answer": "The child walked his dog in the park after midnight"},
+            {"original": "The artist finished his painting at the right moment for the exhibition",
+             "user_answer": "The artist finished his painting at the right moment for the exhibition"}
         ]
         result = score_sentence_repetition(sentences)
         
-        # Should get partial credit
+        # PRD: 2 points max (1 per sentence)
+        assert result["score"] == 2
+    
+    def test_sentence_repetition_partial(self):
+        """Test partial sentence match (doesn't score if not exact enough)"""
+        sentences = [
+            {"original": "The child walked his dog in the park after midnight",
+             "user_answer": "The child walked dog park"}  # Significantly shortened
+        ]
+        result = score_sentence_repetition(sentences)
+        
+        # Should not get full credit for significantly shortened sentence
         similarity = result["individual_scores"][0]["similarity"]
-        assert 0.7 <= similarity < 0.8
+        assert similarity < 0.8
     
     def test_verbal_fluency_sufficient_words(self):
-        """Test verbal fluency with ≥11 words"""
+        """Test verbal fluency with ≥11 words (PRD: 1 point)"""
         transcript = "fox fish fork farm face foot finger flame flag frame fruit flower"
         result = score_verbal_fluency(transcript)
         
-        assert result["score"] == 2
-        assert result["word_count"] >= 11
+        # PRD: 1 point for ≥11 unique words starting with F
+        assert result["score"] == 1
+        assert result["unique_words"] >= 11
     
     def test_verbal_fluency_insufficient_words(self):
-        """Test verbal fluency with <11 words"""
+        """Test verbal fluency with <11 words (0 points)"""
         transcript = "fox fish fork farm face"
         result = score_verbal_fluency(transcript)
         
@@ -178,52 +270,69 @@ class TestLanguage:
 
 
 class TestAbstraction:
-    """Tests for abstraction task"""
+    """Tests for abstraction task per PRD Section 3.5"""
     
-    def test_both_correct(self):
-        """Test both abstractions correct"""
-        responses = [
-            {"pair": "train-bicycle", "answer": "means of transportation", "correct": True},
-            {"pair": "watch-ruler", "answer": "measuring instruments", "correct": True}
-        ]
+    def test_both_correct_prd_pairs(self):
+        """Test both PRD abstractions correct with tools/light concepts"""
+        # PRD pairs: Hammer/Screwdriver (tools), Matches/Lamp (light sources)
+        # Function expects list of strings (user answers for each pair)
+        responses = ["tools", "light"]
         result = score_abstraction(responses)
         
         assert result["score"] == 2
     
+    def test_acceptable_alternatives(self):
+        """Test PRD-acceptable alternative answers"""
+        # "carpentry" is acceptable for Hammer/Screwdriver
+        # "illumination" is acceptable for Matches/Lamp
+        responses = ["carpentry", "illumination"]
+        result = score_abstraction(responses)
+        
+        # Both should be accepted
+        assert result["score"] == 2
+    
     def test_one_correct(self):
         """Test one correct abstraction"""
-        responses = [
-            {"pair": "train-bicycle", "answer": "means of transportation", "correct": True},
-            {"pair": "watch-ruler", "answer": "tools", "correct": False}
-        ]
+        responses = ["tools", "things you find at home"]
         result = score_abstraction(responses)
         
         assert result["score"] == 1
+    
+    def test_concrete_thinking_zero_points(self):
+        """Test concrete (non-abstract) answers get 0 points"""
+        # These are unacceptable per PRD
+        responses = ["have handles", "produce heat"]
+        result = score_abstraction(responses)
+        
+        # Concrete/unacceptable answers should not score
+        assert result["score"] == 0
 
 
 class TestDelayedRecall:
-    """Tests for delayed recall"""
+    """Tests for delayed recall per PRD Section 3.6"""
     
-    def test_perfect_recall(self):
-        """Test perfect word recall"""
-        original = ["face", "velvet", "church", "daisy", "red"]
-        recalled = ["face", "velvet", "church", "daisy", "red"]
+    def test_perfect_recall_prd_words(self):
+        """Test perfect word recall with PRD words (5 points)"""
+        # PRD words: LEG, COTTON, SCHOOL, TOMATO, WHITE
+        original = ["leg", "cotton", "school", "tomato", "white"]
+        recalled = ["leg", "cotton", "school", "tomato", "white"]
         result = score_delayed_recall(original, recalled)
         
-        assert result["score"] == 4  # Capped at 4 per PRD
+        # PRD: 1 point per word, max 5 points
+        assert result["score"] == 5
     
     def test_partial_recall(self):
         """Test partial word recall"""
-        original = ["face", "velvet", "church", "daisy", "red"]
-        recalled = ["face", "church", "red"]
+        original = ["leg", "cotton", "school", "tomato", "white"]
+        recalled = ["leg", "school", "white"]
         result = score_delayed_recall(original, recalled)
         
         assert result["score"] == 3
     
     def test_fuzzy_recall(self):
         """Test recall with similar spellings"""
-        original = ["face", "velvet", "church", "daisy", "red"]
-        recalled = ["fase", "velvet", "chruch", "daisy"]  # Typos
+        original = ["leg", "cotton", "school", "tomato", "white"]
+        recalled = ["leg", "coton", "scool", "tomato"]  # Typos
         result = score_delayed_recall(original, recalled)
         
         # Should accept with fuzzy matching

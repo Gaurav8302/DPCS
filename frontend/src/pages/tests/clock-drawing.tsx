@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { ArrowLeft, Clock, Camera, Pencil } from 'lucide-react'
+import { ArrowLeft, Brain, Clock, Camera, Pencil } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -217,28 +217,32 @@ export default function ClockDrawingTest() {
   return (
     <>
       <Head>
-        <title>Clock Drawing Test - Dimentia Project</title>
+        <title>Clock Drawing Test | MoCA Digital</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Clock Drawing Test
-            </h1>
-            <p className="text-gray-600">
-              Draw a clock face showing the time: <strong className="text-2xl text-blue-600">{targetTime}</strong>
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Clock Drawing</h1>
+            </div>
           </div>
+        </nav>
+
+        <div className="max-w-6xl mx-auto px-4 py-8">
 
           {/* Target Time Display */}
           <div className="bg-white rounded-lg shadow-md p-8 mb-6 text-center">

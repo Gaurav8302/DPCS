@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Brain } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -11,11 +11,24 @@ export default function AttentionVigilance() {
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
+  const [showCountdown, setShowCountdown] = useState(false)
+  const [countdown, setCountdown] = useState(3)
   const [currentLetter, setCurrentLetter] = useState<string | null>(null)
+  const [currentIndex, setCurrentIndex] = useState(-1)
   const [letters, setLetters] = useState<string[]>([])
-  const [targetCount, setTargetCount] = useState(0)
-  const [userTaps, setUserTaps] = useState(0)
+  const [targetIndices, setTargetIndices] = useState<number[]>([])
+  const [tappedThisLetter, setTappedThisLetter] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
+  const [testComplete, setTestComplete] = useState(false)
+  
+  // Use refs for accurate tracking during async loop
+  const tapsRef = useRef<number[]>([])
+  const lettersRef = useRef<string[]>([])
+  const targetIndicesRef = useRef<number[]>([])
+  
+  // Final stats (calculated after test)
+  const [correctTaps, setCorrectTaps] = useState(0)
+  const [incorrectTaps, setIncorrectTaps] = useState(0)
 
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem('session_id')
@@ -31,81 +44,123 @@ export default function AttentionVigilance() {
   }, [router])
 
   const generateLetterSequence = () => {
-    // Generate a sequence of random letters with target letter 'A' appearing randomly
     const allLetters = 'BCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
     const sequence: string[] = []
-    let aCount = 0
+    const aIndices: number[] = []
     
-    // Create a 60-letter sequence with approximately 5-8 'A's
-    for (let i = 0; i < 60; i++) {
-      if (Math.random() < 0.12 && aCount < 8) {
+    // Create a 30-letter sequence
+    for (let i = 0; i < 30; i++) {
+      if (Math.random() < 0.15 && aIndices.length < 8) {
         sequence.push('A')
-        aCount++
+        aIndices.push(i)
       } else {
         const randomIndex = Math.floor(Math.random() * allLetters.length)
         sequence.push(allLetters[randomIndex])
       }
     }
     
+    // Ensure at least 4 A's
+    while (aIndices.length < 4) {
+      const randomPos = Math.floor(Math.random() * sequence.length)
+      if (sequence[randomPos] !== 'A') {
+        sequence[randomPos] = 'A'
+        aIndices.push(randomPos)
+        aIndices.sort((a, b) => a - b)
+      }
+    }
+    
     setLetters(sequence)
-    setTargetCount(aCount)
-    return sequence
+    setTargetIndices(aIndices)
+    lettersRef.current = sequence
+    targetIndicesRef.current = aIndices
+    return { sequence, aIndices }
   }
 
   const startTest = async () => {
     setHasStarted(true)
-    setIsRunning(true)
-    const sequence = generateLetterSequence()
+    tapsRef.current = []
+    setCorrectTaps(0)
+    setIncorrectTaps(0)
     
-    // Show each letter for 3 seconds
+    const { sequence, aIndices } = generateLetterSequence()
+    
+    // Countdown
+    setShowCountdown(true)
+    for (let i = 3; i > 0; i--) {
+      setCountdown(i)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+    setShowCountdown(false)
+    
+    setIsRunning(true)
+    
+    // Show each letter for 2 seconds
     for (let i = 0; i < sequence.length; i++) {
+      setCurrentIndex(i)
       setCurrentLetter(sequence[i])
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      setTappedThisLetter(false)
+      await new Promise(resolve => setTimeout(resolve, 2000))
     }
     
     setCurrentLetter(null)
+    setCurrentIndex(-1)
     setIsRunning(false)
+    setTestComplete(true)
+    
+    // Calculate final stats from refs (accurate)
+    const taps = tapsRef.current
+    const correct = taps.filter(idx => sequence[idx] === 'A').length
+    const incorrect = taps.filter(idx => sequence[idx] !== 'A').length
+    
+    setCorrectTaps(correct)
+    setIncorrectTaps(incorrect)
   }
 
   const handleTap = () => {
-    if (isRunning && currentLetter === 'A') {
-      setUserTaps(prev => prev + 1)
-    }
+    if (!isRunning || tappedThisLetter || currentIndex < 0) return
+    
+    // Record tap in ref for accurate tracking
+    tapsRef.current.push(currentIndex)
+    setTappedThisLetter(true)
   }
 
   const handleSubmit = async () => {
     setLoading(true)
     
+    // Calculate total errors
+    const missedAs = targetIndicesRef.current.filter(idx => !tapsRef.current.includes(idx)).length
+    const totalErrors = missedAs + incorrectTaps
+    
     try {
-      
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/api/score/attention-vigilance`, {
+      const response = await fetch(`${apiUrl}/api/score/attention/vigilance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
           user_id: userId,
-          expected_taps: targetCount,
-          actual_taps: userTaps
+          expected_taps: targetIndicesRef.current.length,
+          actual_taps: correctTaps,
+          false_alarms: incorrectTaps,
+          total_errors: totalErrors
         })
       })
       
       if (response.ok) {
         const result = await response.json()
         console.log('Vigilance Attention Result:', result)
-        // Navigate to next test
-        router.push('/tests/sentence-repetition')
+        router.push('/tests/attention-serial7')
       } else {
         const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
         console.error('Submission error:', errorData)
         alert(`Failed to submit results: ${errorData.detail || 'Server error'}. Proceeding to next test...`)
-        router.push('/tests/sentence-repetition')
+        router.push('/tests/attention-serial7')
       }
       
     } catch (error) {
       console.error('Error submitting vigilance:', error)
       alert('Unable to connect to server. Proceeding to next test...')
-      router.push('/tests/sentence-repetition')
+      router.push('/tests/attention-serial7')
     } finally {
       setLoading(false)
     }
@@ -121,26 +176,27 @@ export default function AttentionVigilance() {
         <title>Attention - Vigilance | MoCA Assessment</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100">
-        {/* Header */}
-        <header className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Attention - Vigilance</h1>
-                  <p className="text-sm text-gray-600">Module 7 of 12</p>
-                </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
               </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Attention - Vigilance</h1>
             </div>
           </div>
-        </header>
+        </nav>
 
         {/* Main Content */}
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -158,17 +214,18 @@ export default function AttentionVigilance() {
                   </h2>
                   <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                     You will see a series of letters appear one at a time. 
-                    Tap or click the screen whenever you see the letter <strong className="text-purple-600">A</strong>.
+                    Tap or click when you see the letter <strong className="text-purple-600">A</strong>.
                   </p>
                 </div>
 
                 <div className="bg-purple-50 p-6 rounded-lg max-w-xl mx-auto">
                   <h3 className="font-semibold text-gray-900 mb-3">Instructions:</h3>
                   <ul className="text-left text-gray-700 space-y-2">
-                    <li>• Letters will appear for 3 seconds each</li>
-                    <li>• Click/tap the screen when you see the letter "A"</li>
-                    <li>• Try to catch all the A's without clicking other letters</li>
-                    <li>• Stay focused throughout the entire sequence</li>
+                    <li>• Each letter appears for <strong>2 seconds</strong></li>
+                    <li>• <strong>Tap once</strong> when you see the letter "A"</li>
+                    <li>• You can only tap <strong>once per letter</strong></li>
+                    <li>• Try NOT to tap on other letters</li>
+                    <li>• Stay focused throughout the sequence</li>
                   </ul>
                 </div>
 
@@ -181,20 +238,39 @@ export default function AttentionVigilance() {
               </div>
             )}
 
-            {isRunning && (
-              <div 
-                className="text-center py-16 cursor-pointer"
-                onClick={handleTap}
-              >
-                <div className="text-9xl font-bold text-purple-600 animate-pulse select-none">
-                  {currentLetter}
+            {showCountdown && (
+              <div className="text-center py-16">
+                <p className="text-gray-600 mb-4">Get Ready...</p>
+                <div className="text-9xl font-bold text-purple-600 animate-pulse">
+                  {countdown}
                 </div>
-                <p className="text-gray-600 mt-8">Tap when you see the letter "A"</p>
-                <p className="text-sm text-gray-500 mt-2">Taps detected: {userTaps}</p>
               </div>
             )}
 
-            {hasStarted && !isRunning && currentLetter === null && (
+            {isRunning && (
+              <div className="text-center py-8">
+                {/* Large tappable area - neutral styling */}
+                <button
+                  onClick={handleTap}
+                  disabled={tappedThisLetter}
+                  className="w-full py-16 rounded-xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 cursor-pointer select-none transition-colors"
+                >
+                  <div className="text-9xl font-bold text-gray-800">
+                    {currentLetter}
+                  </div>
+                  <p className="text-gray-500 mt-8">
+                    Tap when you see "A"
+                  </p>
+                </button>
+                
+                {/* Progress indicator only */}
+                <div className="mt-6 text-sm text-gray-500">
+                  Letter {currentIndex + 1} of {letters.length}
+                </div>
+              </div>
+            )}
+
+            {testComplete && (
               <div className="space-y-8 text-center">
                 <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                   <span className="text-5xl">✓</span>
@@ -204,18 +280,33 @@ export default function AttentionVigilance() {
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">
                     Test Complete!
                   </h2>
-                  <p className="text-gray-600">
-                    You detected {userTaps} target letter{userTaps !== 1 ? 's' : ''}
-                  </p>
+                </div>
+
+                {/* Simple results - just correct and incorrect */}
+                <div className="bg-gray-50 p-6 rounded-lg max-w-md mx-auto">
+                  <h3 className="font-semibold text-gray-900 mb-4">Your Results:</h3>
+                  <div className="space-y-3 text-left">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Correct taps:</span>
+                      <span className="font-medium">{correctTaps}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Incorrect taps:</span>
+                      <span className="font-medium">{incorrectTaps}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-4 justify-center">
                   <button
                     onClick={() => {
                       setHasStarted(false)
-                      setUserTaps(0)
-                      setTargetCount(0)
+                      setTestComplete(false)
+                      tapsRef.current = []
+                      setCorrectTaps(0)
+                      setIncorrectTaps(0)
                       setLetters([])
+                      setTargetIndices([])
                     }}
                     className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                   >

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Brain, Mic, MicOff } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+// PRD-specified sentences for repetition (Section 3.5 A)
 const SENTENCES = [
-  "I only know that John is the one to help today.",
-  "The cat always hid under the couch when dogs were in the room."
+  "The child walked his dog in the park after midnight.",
+  "The artist finished his painting at the right moment for the exhibition."
 ]
 
 export default function SentenceRepetition() {
@@ -18,6 +19,8 @@ export default function SentenceRepetition() {
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
   const [userInputs, setUserInputs] = useState<string[]>(['', ''])
   const [showSentence, setShowSentence] = useState(true)
+  const [isListening, setIsListening] = useState(false)
+  const [speechError, setSpeechError] = useState<string | null>(null)
 
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem('session_id')
@@ -41,6 +44,51 @@ export default function SentenceRepetition() {
     const newInputs = [...userInputs]
     newInputs[currentSentenceIndex] = value
     setUserInputs(newInputs)
+  }
+
+  const toggleListening = () => {
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    let recognition: any = null;
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          handleInputChange(transcript);
+          setIsListening(false);
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error', event.error);
+          setSpeechError(event.error);
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        try {
+          recognition.start();
+          setIsListening(true);
+          setSpeechError(null);
+        } catch (e) {
+          console.error(e);
+          setIsListening(false);
+        }
+      } else {
+        setSpeechError('Speech recognition is not supported in this browser. Please type the sentence.');
+      }
+    }
   }
 
   const handleNextSentence = () => {
@@ -99,25 +147,27 @@ export default function SentenceRepetition() {
         <title>Sentence Repetition | MoCA Assessment</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100">
-        <header className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Sentence Repetition</h1>
-                  <p className="text-sm text-gray-600">Module 8 of 12</p>
-                </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
               </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Sentence Repetition</h1>
             </div>
           </div>
-        </header>
+        </nav>
 
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-lg shadow-lg p-8">
@@ -163,6 +213,24 @@ export default function SentenceRepetition() {
                   </p>
                 </div>
 
+                {speechError ? (
+                  <div className="bg-red-50 p-4 rounded-lg text-red-700 mb-4">
+                    {speechError}
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col items-center mb-6">
+                  <button
+                    onClick={toggleListening}
+                    className={`p-6 rounded-full transition-colors ${isListening ? 'bg-red-100 animate-pulse' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  >
+                    {isListening ? <Mic className="w-12 h-12 text-red-600" /> : <MicOff className="w-12 h-12 text-gray-400" />}
+                  </button>
+                  <p className="mt-4 text-lg font-medium text-gray-700">
+                    {isListening ? 'Listening... Speak the sentence' : 'Click microphone to record, or type below'}
+                  </p>
+                </div>
+
                 <textarea
                   value={userInputs[currentSentenceIndex]}
                   onChange={(e) => handleInputChange(e.target.value)}
@@ -170,24 +238,17 @@ export default function SentenceRepetition() {
                   onCopy={(e) => e.preventDefault()} // Prevent copy
                   rows={4}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 text-lg"
-                  placeholder="Type the sentence here..."
+                  placeholder="Or type the sentence here..."
                   autoFocus
                 />
 
-                <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                  <p className="text-sm text-red-800">
-                    ⚠️ Copy and paste are disabled. You must type from memory.
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ Copy and paste are disabled. You must speak or type from memory.
                   </p>
                 </div>
 
                 <div className="flex gap-4 justify-center">
-                  <button
-                    onClick={() => setShowSentence(true)}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    View Sentence Again
-                  </button>
-                  
                   {!isLastSentence ? (
                     <button
                       onClick={handleNextSentence}

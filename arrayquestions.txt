@@ -1,0 +1,26 @@
+q=1how many even and odd number are present ouput will be count 
+arr=3,7,6,9,4,2,8,11,17,13
+
+print even numbers and odd numbers
+
+sum of even numbers and odd numbers 
+
+arr=0,1,1,00,10,111,00,11,000
+move all the o towards the right of the array 
+arrange 0 and 1 alternatively 
+remove consecutive 0 and consecutive 1 
+
+find the maximum , minimum, second maximum and minimum and their sum 
+
+find kth prime number 
+
+
+average of the element of the array 
+count the number of occurance of elements in an array 
+arr=1,2,2,4,1,2,3,4,5,1,2,3,4,6,7,7,8
+
+check weather the arrya is palindrom or not 
+
+
+arr=1,1,2,3,4,-2,-4,-5,-2
+arrange negative and positive elements alternatively 

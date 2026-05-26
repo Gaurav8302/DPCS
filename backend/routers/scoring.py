@@ -10,11 +10,14 @@ from utils import (
     score_attention_forward,
     score_attention_backward,
     score_attention_vigilance,
+    score_attention_serial7,
     score_sentence_repetition,
     score_verbal_fluency,
     score_abstraction,
     score_delayed_recall,
     record_section_result,
+    MEMORY_WORDS,
+    SENTENCES,
 )
 
 router = APIRouter()
@@ -283,20 +286,21 @@ class VigilanceRequest(BaseModel):
     total_targets: int
 
 class VigilanceResponse(BaseModel):
-    score: int  # 0-3 points
+    score: int  # 0-1 points per PRD
     confidence: float
     hits: int
     misses: int
     false_alarms: int
+    total_errors: int
 
 @router.post("/attention/vigilance", response_model=VigilanceResponse)
 async def score_attention_vigilance_test(data: VigilanceRequest):
     """
-    Score vigilance test
-    - 0 or 1 error: 3 points
-    - 2 errors: 2 points
-    - 3 errors: 1 point
-    - >3 errors: 0 points
+    Score vigilance test per PRD Section 3.4 C.
+    
+    Letter Sequence: F-B-A-C-M-N-A-A-F-K-C-A-D-E-A-A-F-A-K-L-F-A-M
+    Target: Tap/click on letter 'A' only
+    Scoring: 0-1 errors = 1 point, 2+ errors = 0 points
     """
     result = score_attention_vigilance(
         data.taps,
@@ -312,11 +316,55 @@ async def score_attention_vigilance_test(data: VigilanceRequest):
             "hits": result["hits"],
             "misses": result["misses"],
             "false_alarms": result["false_alarms"],
+            "total_errors": result["total_errors"],
+        },
+        max_score=1.0,
+    )
+
+    return VigilanceResponse(**result)
+
+
+# Serial 7s Models (New per PRD)
+class Serial7Request(BaseModel):
+    session_id: str
+    user_id: str
+    responses: List[int]  # User's 5 subtractions starting from 100
+
+class Serial7Response(BaseModel):
+    score: int  # 0-3 points
+    confidence: float
+    correct_count: int
+    details: List[Dict[str, Any]]
+
+@router.post("/attention/serial7", response_model=Serial7Response)
+async def score_attention_serial7_test(data: Serial7Request):
+    """
+    Score Serial 7s test per PRD Section 3.4 D.
+    
+    Starting Number: 100 (subtract 7 repeatedly)
+    Correct Sequence: 100 → 93 → 86 → 79 → 72 → 65
+    
+    Scoring (each subtraction evaluated independently):
+    - 0 correct subtractions = 0 points
+    - 1 correct subtraction = 1 point
+    - 2-3 correct subtractions = 2 points
+    - 4-5 correct subtractions = 3 points
+    """
+    result = score_attention_serial7(data.responses)
+    await _save_section_result(
+        session_id=data.session_id,
+        user_id=data.user_id,
+        section_name="attention_serial7",
+        result_payload=result,
+        details={
+            "user_responses": data.responses,
+            "correct_count": result["correct_count"],
+            "calculation_details": result["details"],
         },
         max_score=3.0,
     )
 
-    return VigilanceResponse(**result)
+    return Serial7Response(**result)
 
 # Language Models
 class SentenceRepetitionRequest(BaseModel):

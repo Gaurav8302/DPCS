@@ -2,6 +2,17 @@
 
 A next-generation digital platform for early detection of cognitive decline and dementia, implementing the Montreal Cognitive Assessment (MoCA) through an interactive web interface with AI-powered scoring.
 
+## 📚 Documentation
+
+**👉 [Complete Documentation](documentation/INDEX.md)** - All project documentation organized in one place
+
+Quick links:
+- [Quick Start Guide](documentation/QUICK_START.md)
+- [Architecture](documentation/ARCHITECTURE.md)
+- [API Documentation](documentation/API_DOCUMENTATION.md)
+- [Testing Guide](documentation/TESTING_GUIDE.md)
+- [Changelog](documentation/CHANGELOG.md) - Latest updates (Nov 6, 2025)
+
 ## 🎯 Features
 
 - **Interactive Cognitive Tests**: 9 comprehensive test modules
@@ -97,6 +108,19 @@ npm test
 cd backend
 pytest
 ```
+
+See [TESTING_GUIDE.md](documentation/TESTING_GUIDE.md) for detailed testing instructions.
+
+## 📚 Additional Documentation
+
+All documentation files are organized in the `/documentation` folder:
+
+- **Setup Guides**: Quick start, localhost setup, Firebase configuration
+- **Technical Docs**: Architecture, API reference, implementation details
+- **Development**: Roadmap, changelog, troubleshooting
+- **Testing**: Testing guide, QA procedures
+
+👉 Start with [documentation/INDEX.md](documentation/INDEX.md) for complete navigation.
 
 ## 📝 License
 

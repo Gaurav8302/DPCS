@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Brain } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+// PRD-specified word pairs (Section 3.6)
 const WORD_PAIRS = [
   { 
-    pair: ['banana', 'orange'], 
-    correctAnswer: 'fruit',
-    options: ['fruit', 'vegetables', 'colors', 'shapes']
+    pair: ['hammer', 'screwdriver'], 
+    question: 'How are a HAMMER and a SCREWDRIVER alike?',
+    hint: 'Think about what category they belong to'
   },
   { 
-    pair: ['train', 'bicycle'], 
-    correctAnswer: 'transportation',
-    options: ['transportation', 'furniture', 'tools', 'electronics']
+    pair: ['matches', 'lamp'], 
+    question: 'How are MATCHES and a LAMP alike?',
+    hint: 'Think about what they both provide'
   }
 ]
 
@@ -23,7 +24,7 @@ export default function Abstraction() {
   const [sessionId, setSessionId] = useState('')
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(['', ''])
+  const [responses, setResponses] = useState<string[]>(['', ''])
 
   useEffect(() => {
     const storedSessionId = sessionStorage.getItem('session_id')
@@ -38,10 +39,10 @@ export default function Abstraction() {
     setUserId(storedUserId)
   }, [router])
 
-  const handleAnswerSelect = (index: number, value: string) => {
-    const newAnswers = [...selectedAnswers]
-    newAnswers[index] = value
-    setSelectedAnswers(newAnswers)
+  const handleResponseChange = (index: number, value: string) => {
+    const newResponses = [...responses]
+    newResponses[index] = value
+    setResponses(newResponses)
   }
 
   const handleSubmit = async () => {
@@ -56,7 +57,7 @@ export default function Abstraction() {
         body: JSON.stringify({
           session_id: sessionId,
           user_id: userId,
-          responses: selectedAnswers
+          responses: responses
         })
       })
       
@@ -90,25 +91,27 @@ export default function Abstraction() {
         <title>Abstraction | MoCA Assessment</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
-        <header className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Abstraction</h1>
-                  <p className="text-sm text-gray-600">Module 10 of 12</p>
-                </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
               </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Abstraction</h1>
             </div>
           </div>
-        </header>
+        </nav>
 
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-lg shadow-lg p-8">
@@ -130,51 +133,39 @@ export default function Abstraction() {
                 <strong>Question:</strong> "How are an apple and a pear alike?"
               </p>
               <p className="text-gray-700 mt-2">
-                <strong>Good answer:</strong> "They are both fruits" or "They are both food"
+                <strong>Good answer:</strong> "They are both <strong>fruits</strong>" (the category they belong to)
+              </p>
+              <p className="text-gray-500 text-sm mt-2">
+                Note: "They are both round" or "They are both edible" would not be the best answers.
               </p>
             </div>
 
             <div className="space-y-8">
               {WORD_PAIRS.map((item, index) => (
                 <div key={index} className="bg-gray-50 p-6 rounded-lg">
-                  <div className="mb-6">
+                  <div className="mb-4">
                     <p className="text-lg font-semibold text-gray-900 mb-2">
                       Question {index + 1}:
                     </p>
-                    <p className="text-xl text-gray-800 mb-4">
-                      How are a <strong className="text-indigo-600">{item.pair[0]}</strong> and a{' '}
-                      <strong className="text-indigo-600">{item.pair[1]}</strong> alike?
+                    <p className="text-xl text-gray-800 mb-2">
+                      {item.question}
+                    </p>
+                    <p className="text-sm text-gray-500 italic">
+                      💡 {item.hint}
                     </p>
                   </div>
                   
                   <div>
-                    <p className="block text-sm font-medium text-gray-700 mb-3">
-                      Select the best answer:
-                    </p>
-                    <div className="space-y-3">
-                      {item.options.map((option, optIndex) => (
-                        <label 
-                          key={optIndex}
-                          className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            selectedAnswers[index] === option
-                              ? 'border-indigo-500 bg-indigo-50'
-                              : 'border-gray-300 hover:border-indigo-300'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name={`question-${index}`}
-                            value={option}
-                            checked={selectedAnswers[index] === option}
-                            onChange={() => handleAnswerSelect(index, option)}
-                            className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span className="ml-3 text-lg text-gray-800 capitalize">
-                            {option}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Your answer:
+                    </label>
+                    <input
+                      type="text"
+                      value={responses[index]}
+                      onChange={(e) => handleResponseChange(index, e.target.value)}
+                      placeholder="Enter what they have in common..."
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-lg"
+                    />
                   </div>
                 </div>
               ))}
@@ -183,19 +174,20 @@ export default function Abstraction() {
             <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-4">
               <p className="text-sm text-yellow-800">
                 💡 <strong>Tip:</strong> Think about the category or characteristic that both items share.
+                For example: tools, lighting, vehicles, etc.
               </p>
             </div>
 
             <div className="flex gap-4 justify-center mt-8">
               <button
-                onClick={() => setSelectedAnswers(['', ''])}
+                onClick={() => setResponses(['', ''])}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
               >
                 Clear Answers
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={loading || selectedAnswers.some(a => !a)}
+                disabled={loading || responses.some(r => !r.trim())}
                 className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Submitting...' : 'Submit & Continue'}

@@ -5,14 +5,14 @@ import { ArrowLeft, Brain } from 'lucide-react'
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-// Default words for memory test
-const DEFAULT_WORDS = ['FACE', 'VELVET', 'CHURCH', 'DAISY', 'RED']
+// PRD-specified words for memory test (Section 3.3)
+const MEMORY_WORDS = ['LEG', 'COTTON', 'SCHOOL', 'TOMATO', 'WHITE']
 
 export default function MemoryLearning() {
   const router = useRouter()
   const [sessionId, setSessionId] = useState('')
   const [userId, setUserId] = useState('')
-  const [words, setWords] = useState<string[]>(DEFAULT_WORDS)
+  const [words, setWords] = useState<string[]>(MEMORY_WORDS)
   const [countdown, setCountdown] = useState(30)
   const [isStarted, setIsStarted] = useState(false)
 
@@ -62,25 +62,27 @@ export default function MemoryLearning() {
         <title>Memory Learning | MoCA Assessment</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100">
-        <header className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Memory - Learning Phase</h1>
-                  <p className="text-sm text-gray-600">First step of memory assessment</p>
-                </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
               </div>
+              <span className="font-semibold text-gray-900">MoCA Digital</span>
+            </div>
+            <div className="ml-auto">
+              <h1 className="text-lg font-semibold text-gray-900">Memory Learning</h1>
             </div>
           </div>
-        </header>
+        </nav>
 
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {!isStarted ? (

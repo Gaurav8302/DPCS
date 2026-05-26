@@ -11,59 +11,87 @@ from fastapi import HTTPException, status
 from database import get_collection
 
 # Section configuration describing how raw section names map to aggregate buckets
+# Based on PRD MoCA Test Implementation - Total 30 points
 SECTION_CONFIG: Dict[str, Dict[str, Any]] = {
-    "trail_making": {"aggregate": "trail_making", "max": 1.0},
-    "cube_copy": {"aggregate": "cube_copy", "max": 3.0},
-    "clock_drawing": {"aggregate": "clock_drawing", "max": 3.0},
+    # Executive Function & Visuospatial (5 points total)
+    "trail_making": {"aggregate": "visuospatial", "sub_key": "trail_making", "max": 1.0},
+    "cube_copy": {"aggregate": "visuospatial", "sub_key": "cube_copy", "max": 1.0},
+    "clock_drawing": {"aggregate": "visuospatial", "sub_key": "clock_drawing", "max": 3.0},
+    # Naming (3 points)
     "naming": {"aggregate": "naming", "max": 3.0},
+    # Attention (6 points total)
     "attention_forward": {"aggregate": "attention", "sub_key": "forward", "max": 1.0},
     "attention_backward": {"aggregate": "attention", "sub_key": "backward", "max": 1.0},
-    "attention_vigilance": {"aggregate": "attention", "sub_key": "vigilance", "max": 3.0},
+    "attention_vigilance": {"aggregate": "attention", "sub_key": "vigilance", "max": 1.0},
+    "attention_serial7": {"aggregate": "attention", "sub_key": "serial7", "max": 3.0},
+    # Language (3 points total)
     "sentence_repetition": {"aggregate": "language", "sub_key": "sentence_repetition", "max": 2.0},
-    "verbal_fluency": {"aggregate": "language", "sub_key": "verbal_fluency", "max": 2.0},
+    "verbal_fluency": {"aggregate": "language", "sub_key": "verbal_fluency", "max": 1.0},
+    # Abstraction (2 points)
     "abstraction": {"aggregate": "abstraction", "max": 2.0},
-    "delayed_recall": {"aggregate": "delayed_recall", "max": 4.0},
-    "orientation": {"aggregate": "orientation", "max": 5.0},
+    # Delayed Recall (5 points)
+    "delayed_recall": {"aggregate": "delayed_recall", "max": 5.0},
+    # Orientation (6 points)
+    "orientation": {"aggregate": "orientation", "max": 6.0},
 }
 
+# Maximum points per aggregate section per PRD
 AGGREGATE_MAX: Dict[str, float] = {
-    "trail_making": 1.0,
-    "cube_copy": 3.0,
-    "clock_drawing": 3.0,
-    "naming": 3.0,
-    "attention": 5.0,
-    "language": 4.0,
-    "abstraction": 2.0,
-    "delayed_recall": 4.0,
-    "orientation": 5.0,
+    "visuospatial": 5.0,      # Trail Making (1) + Cube (1) + Clock (3)
+    "naming": 3.0,            # 3 animals
+    "attention": 6.0,         # Forward (1) + Backward (1) + Vigilance (1) + Serial7 (3)
+    "language": 3.0,          # Sentence Repetition (2) + Verbal Fluency (1)
+    "abstraction": 2.0,       # 2 word pairs
+    "delayed_recall": 5.0,    # 5 words
+    "orientation": 6.0,       # Date, Month, Year, Day, Place, City
 }
 
 AGGREGATE_EXPECTED_SUBSECTIONS: Dict[str, set[str]] = {
-    "attention": {"forward", "backward", "vigilance"},
+    "visuospatial": {"trail_making", "cube_copy", "clock_drawing"},
+    "attention": {"forward", "backward", "vigilance", "serial7"},
     "language": {"sentence_repetition", "verbal_fluency"},
 }
 
 
 class MoCAScorer:
-    """Utility helpers for MoCA total score and interpretation."""
+    """Utility helpers for MoCA total score and interpretation per PRD."""
 
     INTERPRETATION_RANGES = (
         (26, 30, "Normal"),
-        (18, 25, "Mild"),
-        (10, 17, "Moderate"),
-        (0, 9, "Severe"),
+        (18, 25, "Mild Cognitive Impairment"),
+        (10, 17, "Moderate Cognitive Impairment"),
+        (0, 9, "Severe Cognitive Impairment"),
     )
 
     @classmethod
-    def calculate_total_score(cls, section_scores: Dict[str, float]) -> float:
+    def calculate_total_score(cls, section_scores: Dict[str, float], education_years: int = 13) -> float:
+        """
+        Calculate total MoCA score with education adjustment per PRD.
+        
+        PRD Section 4: If education_years <= 12, add 1 point to total score.
+        Maximum score is 30 points.
+        """
         total = 0.0
         for section, max_points in AGGREGATE_MAX.items():
             total += min(float(section_scores.get(section, 0.0)), max_points)
+        
+        # Education adjustment per PRD: +1 point if ≤12 years of education
+        if education_years <= 12:
+            total += 1
+        
         # Keep totals within 30 point scale
         return min(total, 30.0)
 
     @classmethod
     def interpret_score(cls, total_score: float) -> Optional[str]:
+        """
+        Interpret the total score per PRD guidelines.
+        
+        - 26-30 points: Normal cognition
+        - 18-25 points: Mild cognitive impairment
+        - 10-17 points: Moderate cognitive impairment
+        - <10 points: Severe cognitive impairment
+        """
         if total_score <= 0:
             return None
         for lower, upper, label in cls.INTERPRETATION_RANGES:
@@ -124,7 +152,15 @@ class SessionScoreAggregator:
         else:
             completed_sections.add(aggregate_key)
 
-        total_score = MoCAScorer.calculate_total_score(section_scores)
+        # Get education years for score adjustment (default to 13 if not found)
+        education_level = self.session.get("education_level", "college_level")
+        education_years = 13  # Default: college level
+        if education_level == "not_educated":
+            education_years = 0
+        elif education_level == "basic_schooling":
+            education_years = 12
+
+        total_score = MoCAScorer.calculate_total_score(section_scores, education_years)
         interpretation = MoCAScorer.interpret_score(total_score)
 
         requires_review = bool(self.session.get("requires_manual_review")) or requires_manual_review

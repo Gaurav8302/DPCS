@@ -1,10 +1,19 @@
 """
-Scoring utilities for cognitive tests.
+Scoring utilities for cognitive tests based on MoCA PRD.
 
 Note: Several routines include placeholder heuristics for AI-assisted
 analysis. These functions surface deterministic outputs with
 ``confidence = 0.6`` so the frontend/backoffice can flag results for
 manual review until production models are integrated.
+
+MoCA Score Distribution per PRD:
+- Executive Function & Visuospatial: 5 points (Trail Making: 1, Cube: 1, Clock: 3)
+- Naming: 3 points (Lion, Rhinoceros, Camel)
+- Attention: 6 points (Forward: 1, Backward: 1, Vigilance: 1, Serial 7s: 3)
+- Language: 3 points (Sentence Repetition: 2, Verbal Fluency: 1)
+- Abstraction: 2 points (Hammer/Screwdriver, Matches/Lamp)
+- Delayed Recall: 5 points (LEG, COTTON, SCHOOL, TOMATO, WHITE)
+- Orientation: 6 points (Date, Month, Year, Day, Place, City)
 """
 from typing import List, Dict, Any
 from fuzzywuzzy import fuzz
@@ -12,6 +21,34 @@ import base64
 import io
 import numpy as np
 from PIL import Image
+
+# PRD-specified acceptable answers
+NAMING_ACCEPTABLE_ANSWERS = {
+    'lion': ['lion'],
+    'rhinoceros': ['rhinoceros', 'rhino'],
+    'camel': ['camel', 'dromedary']
+}
+
+# PRD-specified memory words
+MEMORY_WORDS = ['LEG', 'COTTON', 'SCHOOL', 'TOMATO', 'WHITE']
+
+# PRD-specified abstraction pairs and acceptable answers
+ABSTRACTION_PAIRS = {
+    0: {  # Hammer and Screwdriver
+        'acceptable': ['tools', 'tool', 'carpentry', 'construction', 'work instruments', 'hardware'],
+        'unacceptable': ['instruments', 'have handles', 'metallic objects', 'metal']
+    },
+    1: {  # Matches and Lamp
+        'acceptable': ['light', 'lighting', 'illumination', 'produce light', 'give light'],
+        'unacceptable': ['fire', 'hot objects', 'produce heat', 'burn']
+    }
+}
+
+# PRD-specified sentences for repetition
+SENTENCES = [
+    "The child walked his dog in the park after midnight.",
+    "The artist finished his painting at the right moment for the exhibition."
+]
 
 def score_trail_making(
     user_path: List[str],
@@ -67,26 +104,36 @@ def score_cube_copy(
         # Convert to numpy array
         img_array = np.array(image)
         
-        # Heuristic: Check if image has content (non-white pixels)
-        has_content = np.mean(img_array) < 250  # If mostly white, no drawing
+        # OpenCV heuristic for Cube Copy
+        import cv2
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=30, maxLineGap=10)
         
-        # Placeholder scoring: Give partial credit based on image complexity
-        if not has_content:
-            shape_scores = {shape: 0 for shape in shapes_to_copy}
-            total_score = 0
-            confidence = 0.9
-        else:
-            # Heuristic: If there's content, assume shapes are drawn
-            # In production, use CV to detect each shape
-            shape_scores = {shape: 1 for shape in shapes_to_copy}
+        if lines is not None and len(lines) >= 8:
+            # Found enough lines to be a complex shape like a cube
             total_score = len(shapes_to_copy)
-            confidence = 0.6  # Placeholder -> require manual review
+            shape_scores = {shape: 1 for shape in shapes_to_copy}
+            confidence = 0.8
+        elif lines is not None and len(lines) > 0:
+            # Partial drawing
+            total_score = 1 if len(shapes_to_copy) > 0 else 0
+            shape_scores = {}
+            if len(shapes_to_copy) > 0:
+                shape_scores[shapes_to_copy[0]] = 1
+                for shape in shapes_to_copy[1:]:
+                    shape_scores[shape] = 0
+            confidence = 0.7
+        else:
+            total_score = 0
+            shape_scores = {shape: 0 for shape in shapes_to_copy}
+            confidence = 0.9
         
         return {
             "score": total_score,
             "shape_scores": shape_scores,
             "confidence": confidence,
-            "requires_manual_review": confidence < 0.7
+            "requires_manual_review": confidence < 0.85
         }
     except Exception as e:
         # Error in processing, require manual review
@@ -113,16 +160,29 @@ def score_clock_drawing(
         image = Image.open(io.BytesIO(image_bytes))
         img_array = np.array(image)
         
-        # Heuristic scoring
-        has_content = np.mean(img_array) < 250
+        # OpenCV heuristic for Clock Drawing
+        import cv2
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        blurred = cv2.GaussianBlur(gray, (9, 9), 2)
         
-        if not has_content:
-            scores = {"contour": 0, "numbers": 0, "hands": 0}
-            confidence = 0.9
-        else:
-            # Placeholder: assume all criteria met if drawing exists
-            scores = {"contour": 1, "numbers": 1, "hands": 1}
-            confidence = 0.6  # Placeholder -> require manual review
+        # Circle detection
+        circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=30, minRadius=20, maxRadius=0)
+        has_contour = circles is not None
+        
+        # Line detection for hands
+        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=20, maxLineGap=10)
+        has_hands = lines is not None and len(lines) >= 2
+        
+        # Heuristic for numbers: variance/noise inside the circle
+        has_numbers = np.std(gray) > 10
+        
+        scores = {
+            "contour": 1 if has_contour else 0,
+            "numbers": 1 if has_numbers else 0,
+            "hands": 1 if has_hands else 0
+        }
+        confidence = 0.8
         
         total_score = sum(scores.values())
         
@@ -130,7 +190,7 @@ def score_clock_drawing(
             "score": total_score,
             "scores": scores,
             "confidence": confidence,
-            "requires_manual_review": confidence < 0.7
+            "requires_manual_review": confidence < 0.85
         }
     except Exception as e:
         return {
@@ -144,21 +204,40 @@ def score_naming(
     responses: List[Dict[str, str]]
 ) -> Dict[str, Any]:
     """
-    Score naming test with fuzzy matching
-    Returns 0-3 points (one per animal)
-    Accepts similarity >= 0.6
+    Score naming test per PRD Section 3.2.
+    
+    Animal Images & Acceptable Responses:
+    1. Lion (1 point): "lion"
+    2. Rhinoceros (1 point): "rhinoceros", "rhino"
+    3. Camel (1 point): "camel", "dromedary"
+    
+    Returns 0-3 points (one per correctly identified animal)
+    Uses fuzzy matching for typos with minimum 60% similarity
     """
     individual_scores = []
     total_score = 0
     
     for response in responses:
-        animal = response["animal"].lower()
-        user_answer = response["user_answer"].lower()
+        animal = response["animal"].lower().strip()
+        user_answer = response["user_answer"].lower().strip()
         
-        # Fuzzy match using Levenshtein ratio
-        similarity = fuzz.ratio(animal, user_answer) / 100.0
+        # Check against PRD-specified acceptable answers
+        acceptable = NAMING_ACCEPTABLE_ANSWERS.get(animal, [animal])
         
-        if similarity >= 0.6:
+        # Check for exact or acceptable match first
+        exact_match = user_answer in acceptable
+        
+        # If not exact match, try fuzzy matching against all acceptable answers
+        best_similarity = 0.0
+        if not exact_match:
+            for acceptable_answer in acceptable:
+                similarity = fuzz.ratio(acceptable_answer, user_answer) / 100.0
+                best_similarity = max(best_similarity, similarity)
+        else:
+            best_similarity = 1.0
+        
+        # Score if exact match or high similarity (≥60%)
+        if exact_match or best_similarity >= 0.6:
             score = 1
             total_score += 1
         else:
@@ -167,12 +246,14 @@ def score_naming(
         individual_scores.append({
             "animal": animal,
             "user_answer": user_answer,
-            "similarity": similarity,
+            "acceptable_answers": acceptable,
+            "similarity": best_similarity,
+            "exact_match": exact_match,
             "score": score
         })
     
     return {
-        "score": total_score,
+        "score": min(total_score, 3),  # Max 3 points per PRD
         "confidence": 1.0,
         "individual_scores": individual_scores,
         "requires_manual_review": False
@@ -211,11 +292,11 @@ def score_attention_vigilance(
     total_targets: int
 ) -> Dict[str, Any]:
     """
-    Score vigilance test
-    0-1 error: 3 points
-    2 errors: 2 points
-    3 errors: 1 point
-    >3 errors: 0 points
+    Score vigilance test per PRD Section 3.4 C.
+    
+    Letter Sequence: F-B-A-C-M-N-A-A-F-K-C-A-D-E-A-A-F-A-K-L-F-A-M
+    Target: Tap/click on letter 'A' only
+    Scoring: 0-1 errors = 1 point, 2+ errors = 0 points
     """
     taps_set = set(taps)
     targets_set = set(target_indices)
@@ -227,14 +308,8 @@ def score_attention_vigilance(
     
     total_errors = misses + false_alarms
     
-    if total_errors <= 1:
-        score = 3
-    elif total_errors == 2:
-        score = 2
-    elif total_errors == 3:
-        score = 1
-    else:
-        score = 0
+    # Per PRD: 0-1 errors = 1 point, 2+ errors = 0 points
+    score = 1 if total_errors <= 1 else 0
     
     return {
         "score": score,
@@ -242,6 +317,69 @@ def score_attention_vigilance(
         "hits": hits,
         "misses": misses,
         "false_alarms": false_alarms,
+        "total_errors": total_errors,
+        "requires_manual_review": False
+    }
+
+
+def score_attention_serial7(
+    user_responses: List[int]
+) -> Dict[str, Any]:
+    """
+    Score Serial 7s test per PRD Section 3.4 D.
+    
+    Starting Number: 100 (subtract 7 repeatedly)
+    Correct Sequence: 100 → 93 → 86 → 79 → 72 → 65
+    
+    Scoring (each subtraction evaluated independently):
+    - 0 correct subtractions = 0 points
+    - 1 correct subtraction = 1 point
+    - 2-3 correct subtractions = 2 points
+    - 4-5 correct subtractions = 3 points
+    
+    Key Rule: Each subtraction is evaluated independently.
+    Example: 100 → 92 → 85 → 78 → 71 = 3 points (first wrong, rest correct based on previous)
+    """
+    expected_first = [93, 86, 79, 72, 65]
+    
+    correct_count = 0
+    previous_value = 100
+    details = []
+    
+    for i, user_answer in enumerate(user_responses[:5]):
+        # Each subtraction evaluated independently: 
+        # Check if user's answer is exactly 7 less than their previous value
+        expected_from_previous = previous_value - 7
+        is_correct = user_answer == expected_from_previous
+        
+        if is_correct:
+            correct_count += 1
+        
+        details.append({
+            "position": i + 1,
+            "expected_from_100": expected_first[i] if i < len(expected_first) else None,
+            "expected_from_previous": expected_from_previous,
+            "user_answer": user_answer,
+            "correct": is_correct
+        })
+        
+        previous_value = user_answer  # Use user's answer as base for next evaluation
+    
+    # Scoring per PRD
+    if correct_count == 0:
+        score = 0
+    elif correct_count == 1:
+        score = 1
+    elif correct_count <= 3:
+        score = 2
+    else:  # 4-5 correct
+        score = 3
+    
+    return {
+        "score": score,
+        "confidence": 1.0,
+        "correct_count": correct_count,
+        "details": details,
         "requires_manual_review": False
     }
 
@@ -303,13 +441,14 @@ def score_verbal_fluency(
     word_count = len(f_words)
     unique_count = len(unique_f_words)
     
-    score = 2 if word_count >= 11 else 0
+    score = 1 if unique_count >= 11 else 0
     
     return {
         "score": score,
         "confidence": 0.6,
         "word_count": word_count,
         "unique_words": unique_count,
+        "valid_words": unique_f_words,
         "requires_manual_review": True
     }
 
@@ -317,21 +456,61 @@ def score_abstraction(
     responses: List[str]
 ) -> Dict[str, Any]:
     """
-    Score abstraction test with multiple choice
-    1 point per correct answer (max 2)
-    Correct answers: "fruit" and "transportation"
-    """
-    correct_answers = ["fruit", "transportation"]
-    score = 0
+    Score abstraction test per PRD Section 3.6.
     
-    for i, response in enumerate(responses):
-        if i < len(correct_answers) and response.lower() == correct_answers[i].lower():
-            score += 1
+    Word Pairs:
+    1. "Hammer" and "Screwdriver" - Acceptable: tools, carpentry, construction, work instruments
+    2. "Matches" and "Lamp" - Acceptable: light, lighting, illumination
+    
+    Unacceptable Responses:
+    - Hammer/Screwdriver: instruments, have handles, metallic objects
+    - Matches/Lamp: fire, hot objects, produce heat
+    
+    Returns 0-2 points (1 point per correct abstraction)
+    """
+    individual_scores = []
+    total_score = 0
+    
+    for i, response in enumerate(responses[:2]):
+        response_lower = response.lower().strip()
+        pair_config = ABSTRACTION_PAIRS.get(i, {})
+        acceptable = pair_config.get('acceptable', [])
+        unacceptable = pair_config.get('unacceptable', [])
+        
+        # Check if response matches any acceptable answer (fuzzy match)
+        is_acceptable = False
+        matched_acceptable = None
+        for acceptable_answer in acceptable:
+            if acceptable_answer in response_lower or fuzz.ratio(acceptable_answer, response_lower) >= 70:
+                is_acceptable = True
+                matched_acceptable = acceptable_answer
+                break
+        
+        # Check if response matches any unacceptable answer
+        is_unacceptable = any(unacceptable_answer in response_lower for unacceptable_answer in unacceptable)
+        
+        # Score if acceptable and not unacceptable
+        if is_acceptable and not is_unacceptable:
+            score = 1
+            total_score += 1
+        else:
+            score = 0
+        
+        pair_names = ["Hammer/Screwdriver", "Matches/Lamp"]
+        individual_scores.append({
+            "pair": pair_names[i] if i < len(pair_names) else f"Pair {i+1}",
+            "user_answer": response,
+            "acceptable_answers": acceptable,
+            "matched": matched_acceptable,
+            "is_unacceptable": is_unacceptable,
+            "score": score
+        })
     
     return {
-        "score": score,
+        "score": min(total_score, 2),
         "confidence": 1.0,
-        "correct_answers": correct_answers,
+        "individual_scores": individual_scores,
+        "correct_answers": ["tools", "light"],
         "requires_manual_review": False
     }
 
@@ -443,10 +622,40 @@ def score_orientation(
         "correct": day_correct
     }
     
-    # Verify City (basic check - accept if provided)
-    # In production, would use reverse geocoding with GPS coordinates
-    city_provided = len(user_city.strip()) > 2
-    if city_provided:
+    # Verify City using OpenStreetMap Nominatim reverse geocoding
+    import httpx
+    
+    city_verified = False
+    note = "City verification required reverse geocoding"
+    actual_city = None
+    
+    if gps_latitude and gps_longitude:
+        try:
+            url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={gps_latitude}&lon={gps_longitude}&zoom=10"
+            headers = {"User-Agent": "DimentiaApp/2.0"}
+            response = httpx.get(url, headers=headers, timeout=5.0)
+            if response.status_code == 200:
+                data = response.json()
+                address = data.get("address", {})
+                actual_city = address.get("city") or address.get("town") or address.get("village") or address.get("county") or ""
+                
+                # Check fuzzy match
+                from fuzzywuzzy import fuzz
+                if actual_city and fuzz.partial_ratio(user_city.lower(), actual_city.lower()) >= 80:
+                    city_verified = True
+                elif not actual_city and len(user_city.strip()) > 2:
+                    city_verified = True # Fallback
+            else:
+                city_verified = len(user_city.strip()) > 2
+                note = "Geocoding API failed, falling back to basic check"
+        except Exception as e:
+            city_verified = len(user_city.strip()) > 2
+            note = f"Geocoding error: {str(e)}, falling back to basic check"
+    else:
+        city_verified = len(user_city.strip()) > 2
+        note = "No GPS coordinates provided, basic check only"
+        
+    if city_verified:
         score += 1
     
     verification["city"] = {
@@ -455,8 +664,9 @@ def score_orientation(
             "latitude": gps_latitude,
             "longitude": gps_longitude
         } if gps_latitude and gps_longitude else None,
-        "verified": city_provided,
-        "note": "City verification requires reverse geocoding in production"
+        "actual": actual_city,
+        "verified": city_verified,
+        "note": note
     }
     
     # Place (generic - assume correct if they're taking the test)
