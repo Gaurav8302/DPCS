@@ -165,13 +165,18 @@ def score_clock_drawing(
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
         blurred = cv2.GaussianBlur(gray, (9, 9), 2)
         
-        # Circle detection
-        circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, 20, param1=50, param2=30, minRadius=20, maxRadius=0)
-        has_contour = circles is not None
+        # Circle/Contour detection (more lenient than HoughCircles)
+        _, thresh = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        has_contour = False
+        if contours:
+            largest_contour = max(contours, key=cv2.contourArea)
+            if cv2.contourArea(largest_contour) > 100:  # Reasonably large contour
+                has_contour = True
         
-        # Line detection for hands
-        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=20, maxLineGap=10)
+        # Line detection for hands (more lenient thresholds)
+        edges = cv2.Canny(gray, 30, 100, apertureSize=3)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 30, minLineLength=10, maxLineGap=10)
         has_hands = lines is not None and len(lines) >= 2
         
         # Heuristic for numbers: variance/noise inside the circle

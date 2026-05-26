@@ -90,8 +90,8 @@ export default function AttentionBackward() {
         body: JSON.stringify({
           session_id: sessionId,
           user_id: userId,
-          expected: expectedReversed,
-          actual: userInputStr
+          user_response: userInputStr,
+          correct_sequence: expectedReversed
         })
       })
       

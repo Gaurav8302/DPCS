@@ -139,10 +139,9 @@ export default function AttentionVigilance() {
         body: JSON.stringify({
           session_id: sessionId,
           user_id: userId,
-          expected_taps: targetIndicesRef.current.length,
-          actual_taps: correctTaps,
-          false_alarms: incorrectTaps,
-          total_errors: totalErrors
+          taps: tapsRef.current,
+          target_indices: targetIndicesRef.current,
+          total_targets: targetIndicesRef.current.length
         })
       })
       

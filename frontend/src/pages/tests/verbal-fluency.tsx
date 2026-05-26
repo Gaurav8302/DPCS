@@ -270,36 +270,39 @@ export default function VerbalFluency() {
                        </div>
                     ) : null}
                     
-                    <div className="flex flex-col items-center justify-center space-y-4">
-                      {speechError ? (
-                        <div className="flex gap-2 w-full">
-                          <input
-                            type="text"
-                            value={currentWord}
-                            onChange={(e) => setCurrentWord(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Type a word starting with F..."
-                            className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-lg"
-                            autoFocus
-                          />
-                          <button
-                            onClick={handleAddWord}
-                            disabled={!currentWord.trim()}
-                            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
-                          >
-                            Add
-                          </button>
+                    <div className="flex flex-col items-center justify-center space-y-6">
+                      <div className="flex flex-col items-center">
+                        <div className={`p-6 rounded-full ${isListening ? 'bg-red-100 animate-pulse' : 'bg-gray-100'}`}>
+                          {isListening ? <Mic className="w-12 h-12 text-red-600" /> : <MicOff className="w-12 h-12 text-gray-400" />}
                         </div>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <div className={`p-6 rounded-full ${isListening ? 'bg-red-100 animate-pulse' : 'bg-gray-100'}`}>
-                            {isListening ? <Mic className="w-12 h-12 text-red-600" /> : <MicOff className="w-12 h-12 text-gray-400" />}
-                          </div>
-                          <p className="mt-4 text-lg font-medium text-gray-700">
-                            {isListening ? 'Listening... Speak words starting with F' : 'Microphone is off'}
-                          </p>
-                        </div>
-                      )}
+                        <p className="mt-4 text-lg font-medium text-gray-700">
+                          {isListening ? 'Listening... Speak words starting with F' : 'Microphone is off'}
+                        </p>
+                      </div>
+
+                      <div className="w-full flex items-center justify-center gap-4">
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                        <span className="text-gray-400 text-sm font-medium uppercase tracking-wider">OR</span>
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                      </div>
+
+                      <div className="flex gap-2 w-full max-w-lg">
+                        <input
+                          type="text"
+                          value={currentWord}
+                          onChange={(e) => setCurrentWord(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          placeholder="Type a word starting with F..."
+                          className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-lg"
+                        />
+                        <button
+                          onClick={handleAddWord}
+                          disabled={!currentWord.trim()}
+                          className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                        >
+                          Add
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

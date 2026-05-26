@@ -215,7 +215,7 @@ export default function SentenceRepetition() {
 
                 {speechError ? (
                   <div className="bg-red-50 p-4 rounded-lg text-red-700 mb-4">
-                    {speechError}
+                    Voice recording is unavailable ({speechError}). Please type your answer below.
                   </div>
                 ) : null}
 
